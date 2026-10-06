@@ -1,43 +1,36 @@
-# Course Platform
+# Cadence
 
-A platform where learners buy and take video courses. This glossary fixes the words we use for its domain concepts, so code, UI copy, emails and docs all say the same thing.
+Cadence sells video courses to learners. This glossary covers the language around getting money back after a purchase.
 
 ## Language
 
-### People and purchases
-
-**Learner**:
-A person who buys and takes courses on the platform.
-_Avoid_: Customer, buyer, student (outside the `UserRole` value)
-
-**Purchase**:
-A learner's payment for one course, recording the amount they actually paid.
-_Avoid_: Order, transaction
-
-**Team Seat**:
-One course place bought as part of a team licence, which a team member claims with a code.
-_Avoid_: Coupon (in prose), licence slot
-
 ### Refunds
 
+**Refund Request**:
+A learner's ask, with their reason, to get back what they paid for a purchase. The team approves or declines it. One purchase can have several Refund Requests over time, but only one can be undecided at once.
+_Avoid_: Refund (for the ask itself), Cancellation, Reversal, Chargeback
+
+**Open Refund Request**:
+A Refund Request the team hasn't decided yet.
+_Avoid_: Pending, Requested, Awaiting review
+
+**Approved Refund Request**:
+A Refund Request the team has accepted. Approving it is what leads to a Refund.
+
+**Declined Refund Request**:
+A Refund Request the team has turned down. It has no Refund, and the learner may raise a new Refund Request.
+
 **Refund**:
-A learner's request to get their money back for a Purchase, and the outcome of that request. A Purchase has at most one Refund.
-_Avoid_: Reversal, Chargeback, Cancellation, "Cancel my purchase"
+The money returned to a learner after their Refund Request is approved. It is always the full amount they paid. A declined Refund Request has no Refund.
+_Avoid_: Reversal, Chargeback, Cancellation
 
-**Refund Amount**:
-The money a Refund returns, which is always the amount the learner actually paid for the Purchase.
-_Avoid_: Refundable amount, list price
+**Pending Refund**:
+A Refund the team has approved where the money hasn't been confirmed as sent yet.
+_Avoid_: Pending (for a Refund Request awaiting review)
 
-**Refund Window**:
-The period after a Purchase during which the learner can still request a Refund.
-_Avoid_: Cancel window, cancellation period
+**Issued Refund**:
+A Refund where the money has been confirmed as sent back to the learner.
+_Avoid_: Completed, Paid out
 
-**Requested**:
-A Refund that the learner has submitted and nobody has resolved yet.
-_Avoid_: Pending, open, "waiting on us"
-
-**Approved**:
-A Refund that someone accepted, so the Refund Amount goes back to the learner.
-
-**Declined**:
-A Refund that someone rejected. It is final: the learner cannot request another Refund for that Purchase.
+**Failed Refund**:
+A Refund where the money couldn't be sent. The Refund Request stays approved, because the decision hasn't changed.

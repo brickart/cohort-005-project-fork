@@ -57,12 +57,16 @@ function getLessonIdsForCourse(courseId: number): number[] {
   return rows.map((row) => row.id);
 }
 
-// A Purchase has at most one Refund — a Declined Refund is final.
-function getExistingRefund(purchaseId: number) {
+function getOpenRefundRequest(purchaseId: number) {
   return db
     .select()
     .from(refunds)
-    .where(eq(refunds.purchaseId, purchaseId))
+    .where(
+      and(
+        eq(refunds.purchaseId, purchaseId),
+        eq(refunds.status, RefundStatus.Open)
+      )
+    )
     .get();
 }
 
@@ -84,7 +88,7 @@ function lastDayOfWindow(purchasedAtIso: string): string {
  * The confirmation the learner gets in their inbox. There is no mail
  * transport wired up yet, so the built message goes to the server log.
  */
-function buildRefundRequestedEmail(input: {
+function buildRefundRequestEmail(input: {
   learnerName: string;
   learnerEmail: string;
   courseTitle: string;
@@ -99,7 +103,7 @@ function buildRefundRequestedEmail(input: {
       `We have your refund request for "${input.courseTitle}".`,
       `The refund is for ${formatPrice(input.amount)}, the amount you paid.`,
       "",
-      "Our team reviews every refund by hand. You do not need to do anything else — we will email you again when it is done.",
+      "Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.",
       "",
       "— The Cadence team",
     ].join("\n"),
@@ -136,8 +140,8 @@ export async function action({ params, request }: Route.ActionArgs) {
     throw data("You have not bought this course.", { status: 403 });
   }
 
-  if (getExistingRefund(purchase.id)) {
-    throw data("You have already requested a refund for this purchase.", {
+  if (getOpenRefundRequest(purchase.id)) {
+    throw data("You already have an open refund request on this purchase.", {
       status: 409,
     });
   }
@@ -190,13 +194,10 @@ export async function action({ params, request }: Route.ActionArgs) {
   }
 
   if (watchedSeconds >= MAX_WATCHED_HOURS * 60 * 60) {
-    throw data("You have watched too much of this course to get a refund.", {
+    throw data("You have watched too much of this course to request a refund.", {
       status: 403,
     });
   }
-
-  // The Refund Amount is always what the learner actually paid.
-  const refundAmount = purchase.amountPaid;
 
   const formData = await request.formData();
   const parsed = parseFormData(formData, refundActionSchema);
@@ -209,17 +210,17 @@ export async function action({ params, request }: Route.ActionArgs) {
     .insert(refunds)
     .values({
       purchaseId: purchase.id,
-      status: RefundStatus.Requested,
+      status: RefundStatus.Open,
       reason: parsed.data.reason,
     })
     .returning()
     .get();
 
-  const email = buildRefundRequestedEmail({
+  const email = buildRefundRequestEmail({
     learnerName: learner.name,
     learnerEmail: learner.email,
     courseTitle: course.title,
-    amount: refundAmount,
+    amount: purchase.amountPaid,
   });
 
   console.log(

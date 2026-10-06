@@ -378,12 +378,16 @@ function getPurchaseForCourse(userId: number, courseId: number) {
     .get();
 }
 
-// A Purchase has at most one Refund — a Declined Refund is final.
-function getExistingRefund(purchaseId: number) {
+function getOpenRefundRequest(purchaseId: number) {
   return db
     .select({ id: refunds.id })
     .from(refunds)
-    .where(eq(refunds.purchaseId, purchaseId))
+    .where(
+      and(
+        eq(refunds.purchaseId, purchaseId),
+        eq(refunds.status, RefundStatus.Open)
+      )
+    )
     .get();
 }
 
@@ -435,14 +439,14 @@ function asDayString(when: Date) {
 }
 
 /**
- * The Refund the learner is offered, or null if this purchase cannot be
- * refunded.
+ * What the learner is offered if they want their money back, or null if this
+ * purchase cannot be refunded.
  */
-function getRefundOffer(userId: number, courseId: number) {
-  const purchase = getPurchaseForCourse(userId, courseId);
+function getRefundOffer(userId: number, course: { id: number }) {
+  const purchase = getPurchaseForCourse(userId, course.id);
 
   if (!purchase) return null;
-  if (getExistingRefund(purchase.id)) return null;
+  if (getOpenRefundRequest(purchase.id)) return null;
 
   const purchasedDay = asDayString(new Date(purchase.createdAt));
   const windowEnd = new Date(purchase.createdAt);
@@ -477,10 +481,7 @@ function getRefundOffer(userId: number, courseId: number) {
 
   if (claimedSeat) return null;
 
-  // The Refund Amount is always what the learner actually paid.
-  const amount = purchase.amountPaid;
-
-  return { amount, lastDayInWindow };
+  return { amount: purchase.amountPaid, lastDayInWindow };
 }
 
 const ratingSchema = z.object({
@@ -521,7 +522,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     enrolled = isUserEnrolled(currentUserId, course.id);
 
     if (enrolled) {
-      refundOffer = getRefundOffer(currentUserId, course.id);
+      refundOffer = getRefundOffer(currentUserId, { id: course.id });
 
       progress = calculateProgress(currentUserId, course.id, false);
 
@@ -1026,7 +1027,7 @@ function RequestRefund({ slug, amount }: { slug: string; amount: number }) {
         />
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={isSubmitting}>
-            {isSubmitting ? "Sending..." : "Request refund"}
+            {isSubmitting ? "Sending..." : "Request a refund"}
           </Button>
           <Button
             type="button"
