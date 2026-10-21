@@ -39,16 +39,46 @@ _Avoid_: Completed, Paid out
 **Failed Refund**:
 A Refund where the money couldn't be sent. The Refund Request stays approved, because the decision hasn't changed.
 
-### Access
+### Other terms
 
-**Enrollment**:
-What gives a learner access to a course's content. Buying a course or redeeming a Coupon creates one, and an Approved Refund Request ends it.
-_Avoid_: Access (for the record itself), Purchase (a Purchase is the payment, not the access)
+**Watch Limit**:
+A Refund is only offered on a course with under two hours watched. Past that, the Learner has had the course, and the refund form turns them away.
+_Avoid_: Watch cap, Viewing threshold
 
-**Progress**:
-What a learner has done in a course: lessons completed and video watched. It belongs to the learner, not to the Enrollment, so it survives the end of an Enrollment and comes back if they buy again.
-_Avoid_: History, Activity
+**Refunds table**:
+`refunds` — one row per Refund. Columns: `id`, `purchase_id`, `status` (`open`, `approved`, `declined`), `reason`, `amount_refunded`, `requested_at`, `resolved_at`, `resolved_by_user_id`, `decision_note`.
 
-**Coupon**:
-One seat from a team licence purchase. Redeeming it claims the seat and creates an Enrollment for the redeemer. A claimed seat cannot be refunded.
-_Avoid_: Seat code, Voucher
+**refunded_at**:
+Nullable text column on `coupons`. An ISO timestamp, set on every unclaimed coupon when its team purchase is refunded. `getSeatAvailability` returns `"refunded"` for it.
+
+**resolved_by_user_id**:
+Integer column on `refunds`, referencing `users.id`. Null until an Admin approves or declines the Refund.
+
+**RefundRequestCard**:
+The component that draws one Refund Request on `/admin/refunds`, with its Approve and Decline buttons.
+
+**Button**:
+A clickable element that fires an action when the user presses it. Built on `~/components/ui/button`.
+
+**Component**:
+A React function that returns JSX.
+
+**cwd**:
+The directory the dev server was started from. Paths in `scripts/` resolve from here.
+
+**Loader**:
+The React Router function that fetches a route's data on the server before the page renders.
+
+**Slug**:
+The URL-safe name of a course, as in `/courses/:slug`.
+
+**Lapsed**:
+An Enrollment that is no longer active. Shown as a badge on the instructor's student roster.
+
+**Instructor**:
+Speaks for their own courses only. An Instructor builds and edits the courses they own, and sees the learners enrolled on them.
+_Avoid_: Teacher, Author, Creator
+
+**Watched**:
+Seconds of video a Learner has actually played in a course: the furthest point reached in each lesson, added up. Not lessons opened.
+_Avoid_: Viewed, Progress
