@@ -18,6 +18,10 @@ _Avoid_: Teacher, Author, Creator
 The only person who may approve or decline a Refund Request. An Instructor cannot decide refunds on their own course.
 _Avoid_: The team, Staff, Reviewer
 
+**Team Manager**:
+The person who buys a course for a team and hands out its coupon codes to team members. Not an Admin.
+_Avoid_: Team admin, Team owner, Buyer
+
 ### Learning
 
 **Enrollment**:
