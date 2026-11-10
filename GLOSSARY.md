@@ -56,3 +56,17 @@ _Avoid_: Reversal, Chargeback, Cancellation
 **Watch Limit**:
 A Learner can only raise a Refund Request on a course with under two hours Watched.
 _Avoid_: Watch cap, Viewing threshold
+
+### Notifications
+
+**Notification**:
+A message to one Learner, Instructor or Admin about something that happened on Cadence.
+_Avoid_: Alert, Message, Email (for the notification itself)
+
+**Channel**:
+How a Notification reaches its person: Email, In-app or Browser.
+_Avoid_: Medium, Transport
+
+**Notification Preference**:
+A person's on/off choice for one kind of Notification on one Channel.
+_Avoid_: Subscription, Opt-out
