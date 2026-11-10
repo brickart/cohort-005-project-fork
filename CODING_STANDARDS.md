@@ -23,3 +23,18 @@ is a lie the type checker believes.
 Both switch the type checker off at the exact point you are least sure. If a
 value can be missing, narrow it with a check. If you cannot name the type,
 the shape is wrong — fix the shape.
+
+## Store money as integer cents
+
+Every amount of money is a whole number of cents in an `integer` column.
+Only `formatPrice(cents)` turns it into dollars for the screen. Work out
+discounts in cents and round once, with `Math.round`, at the point of sale.
+
+## Take icons from `lucide-react` only
+
+Do not add a second icon library.
+
+## Leave `.prettierrc` alone
+
+Every file is formatted with Prettier using the repo's settings. Do not
+change them to suit your own taste.
