@@ -23,6 +23,8 @@ import { data, isRouteErrorResponse, Link } from "react-router";
 import { db } from "~/db";
 import { and, eq } from "drizzle-orm";
 import { formatPrice } from "~/lib/utils";
+// PROTOTYPE (#9) — Notification Preferences variants
+import { NotificationPreferencesPrototype } from "~/components/notifications-prototype/variants";
 
 const settingsSchema = z.object({
   name: z.string().trim().min(1, "Name cannot be empty."),
@@ -208,6 +210,8 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
           </fetcher.Form>
         </CardContent>
       </Card>
+
+      <NotificationPreferencesPrototype />
 
       {openRefundRequests.length > 0 && (
         <Card className="mt-8 max-w-md">
