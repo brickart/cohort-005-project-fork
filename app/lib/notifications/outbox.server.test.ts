@@ -3,6 +3,7 @@ import { createTestDb, seedBaseData } from "~/test/setup";
 import * as schema from "~/db/schema";
 import type { RefundRequestToDecideData } from "./catalogue";
 import { deliverPending, enqueueNotifications } from "./outbox.server";
+import { DEFAULT_PREFERENCES } from "./preferences";
 import {
   NotificationDeliveryError,
   type Feed,
@@ -80,6 +81,10 @@ function fakeService(
     },
     async markRead() {},
     async markAllRead() {},
+    async getPreferences() {
+      return DEFAULT_PREFERENCES;
+    },
+    async setPreferences() {},
   };
   return { service, delivered };
 }

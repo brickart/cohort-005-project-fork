@@ -1,6 +1,7 @@
 {
   "name": "New Enrollment",
   "description": "Tells a course's Instructor that a Learner enrolled through an individual purchase. In-app only.",
+  "categories": ["cadence"],
   "settings": {
     "override_recipient_preferences": false
   },

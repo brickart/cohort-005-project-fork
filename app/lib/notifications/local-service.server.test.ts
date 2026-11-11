@@ -3,8 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import type { RefundRequestToDecideData } from "./catalogue";
+import type {
+  RefundRequestRaisedData,
+  RefundRequestToDecideData,
+} from "./catalogue";
 import { createLocalNotificationService } from "./local-service.server";
+import { DEFAULT_PREFERENCES } from "./preferences";
 import type { OutboundNotification } from "./service.server";
 
 const PAT = 7;
@@ -154,5 +158,135 @@ describe("the local NotificationService, writing to disk", () => {
       PAT
     );
     expect(feed.items).toHaveLength(1);
+  });
+});
+
+// ─── Notification Preferences ───
+
+function raised(recipientId: number): OutboundNotification {
+  const data: RefundRequestRaisedData = {
+    recipient: { email: `learner-${recipientId}@example.com`, name: "Liam" },
+    actor_name: "Liam",
+    title: "Refund requested — Intro to Rust",
+    action_url: "/settings",
+    preferences_url: "https://cadence.test/settings",
+    course_title: "Intro to Rust",
+    amount: "$79.00",
+    refund_url: "https://cadence.test/settings",
+  };
+  return {
+    idempotencyKey: randomUUID(),
+    type: "refund-request-raised",
+    recipientId,
+    actorId: recipientId,
+    data,
+  };
+}
+
+function serviceWithOutbox() {
+  const outboxDir = mkdtempSync(join(tmpdir(), "outbox-"));
+  const service = createLocalNotificationService({
+    outboxDir,
+    clock: tickingClock(),
+  });
+  const emailsTo = (address: string) =>
+    readdirSync(outboxDir).filter((file) => file.endsWith(`-${address}.json`))
+      .length;
+  return { service, emailsTo };
+}
+
+describe("the local NotificationService's Notification Preferences", () => {
+  it("has everything on by default", async () => {
+    const service = memoryService();
+
+    expect(await service.getPreferences(PAT)).toEqual(DEFAULT_PREFERENCES);
+  });
+
+  it("stops delivery on a Channel turned off for one Notification, and only on that Channel", async () => {
+    const { service, emailsTo } = serviceWithOutbox();
+    await service.setPreferences(PAT, {
+      ...DEFAULT_PREFERENCES,
+      notifications: { "refund-request-to-decide": { email: false } },
+    });
+
+    await service.deliver(toDecide(PAT, "Liam"));
+
+    expect(emailsTo("admin-7@example.com")).toBe(0);
+    expect((await service.getFeed(PAT)).items).toHaveLength(1);
+  });
+
+  it("silences a muted Channel, keeps the choices underneath and restores them on unmute", async () => {
+    const { service, emailsTo } = serviceWithOutbox();
+    const choices = { "refund-request-to-decide": { in_app_feed: false } };
+    await service.setPreferences(PAT, {
+      ...DEFAULT_PREFERENCES,
+      mutedChannels: { email: true, in_app_feed: false },
+      notifications: choices,
+    });
+
+    await service.deliver(toDecide(PAT, "Liam"));
+    expect(emailsTo("admin-7@example.com")).toBe(0);
+    expect((await service.getFeed(PAT)).items).toHaveLength(0);
+
+    const muted = await service.getPreferences(PAT);
+    expect(muted.notifications).toEqual(choices);
+    await service.setPreferences(PAT, {
+      ...muted,
+      mutedChannels: { email: false, in_app_feed: false },
+    });
+
+    await service.deliver(toDecide(PAT, "Ben"));
+    expect(emailsTo("admin-7@example.com")).toBe(1);
+    expect((await service.getFeed(PAT)).items).toHaveLength(0);
+  });
+
+  it("silences everything under Mute everything and restores the choices on unmute", async () => {
+    const { service, emailsTo } = serviceWithOutbox();
+    const choices = { "refund-request-to-decide": { email: false } };
+    await service.setPreferences(PAT, {
+      ...DEFAULT_PREFERENCES,
+      muteEverything: true,
+      notifications: choices,
+    });
+
+    await service.deliver(toDecide(PAT, "Liam"));
+    expect((await service.getFeed(PAT)).items).toHaveLength(0);
+
+    const muted = await service.getPreferences(PAT);
+    expect(muted).toMatchObject({ muteEverything: true, notifications: choices });
+    await service.setPreferences(PAT, { ...muted, muteEverything: false });
+
+    await service.deliver(toDecide(PAT, "Ben"));
+    expect((await service.getFeed(PAT)).items).toHaveLength(1);
+    expect(emailsTo("admin-7@example.com")).toBe(0);
+  });
+
+  it("delivers a Locked Notification on both Channels whatever the Mute and Preferences", async () => {
+    const { service, emailsTo } = serviceWithOutbox();
+    await service.setPreferences(SAM, {
+      muteEverything: true,
+      mutedChannels: { email: true, in_app_feed: true },
+      notifications: {
+        "refund-request-raised": { email: false, in_app_feed: false },
+      },
+    });
+
+    await service.deliver(raised(SAM));
+
+    expect(emailsTo("learner-8@example.com")).toBe(1);
+    expect((await service.getFeed(SAM)).items).toHaveLength(1);
+  });
+
+  it("keeps each person's preferences to themselves", async () => {
+    const service = memoryService();
+    await service.setPreferences(PAT, {
+      ...DEFAULT_PREFERENCES,
+      muteEverything: true,
+    });
+
+    await service.deliver(toDecide(SAM, "Liam"));
+
+    expect((await service.getFeed(SAM)).items).toHaveLength(1);
+    expect((await service.getPreferences(SAM)).muteEverything).toBe(false);
   });
 });

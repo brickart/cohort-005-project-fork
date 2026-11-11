@@ -1,6 +1,7 @@
 {
   "name": "Course status changed",
   "description": "Tells a course's Instructor that an Admin published or archived it.",
+  "categories": ["cadence"],
   "settings": {
     "override_recipient_preferences": false
   },
