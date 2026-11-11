@@ -26,16 +26,39 @@ describe("the Notification Preferences cards", () => {
   });
 
   it("shows each role only the Notifications it receives", () => {
-    const student = ["refund-request-raised", "comment-reply"];
+    const student = [
+      "refund-request-raised",
+      "refund-request-approved",
+      "refund-request-declined",
+      "comment-reply",
+      "purchase-confirmed",
+    ];
     const admin = [
       "refund-request-raised",
       "refund-request-to-decide",
+      "refund-request-approved",
+      "refund-request-declined",
       "comment-reply",
+      "purchase-confirmed",
     ];
-    const instructor = [
+    const instructorEmail = [
       "refund-request-raised",
+      "refund-request-approved",
+      "refund-request-declined",
       "lesson-question",
       "comment-reply",
+      "purchase-confirmed",
+      "course-status-changed",
+    ];
+    // New Enrollment is In-app only, so it has no Email row.
+    const instructorInApp = [
+      "refund-request-raised",
+      "refund-request-approved",
+      "refund-request-declined",
+      "lesson-question",
+      "comment-reply",
+      "purchase-confirmed",
+      "new-enrollment",
       "course-status-changed",
     ];
 
@@ -48,8 +71,8 @@ describe("the Notification Preferences cards", () => {
       in_app_feed: admin,
     });
     expect(rowsOf(UserRole.Instructor)).toEqual({
-      email: instructor,
-      in_app_feed: instructor,
+      email: instructorEmail,
+      in_app_feed: instructorInApp,
     });
   });
 
