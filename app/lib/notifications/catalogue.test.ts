@@ -37,6 +37,29 @@ const FIXTURES: { [K in keyof NotificationDataMap]: NotificationDataMap[K] } = {
     reason: "It was not what I expected.",
     refunds_url: "https://cadence.test/admin/refunds",
   },
+  "purchase-confirmed": {
+    recipient: { email: "liam@example.com", name: "Liam" },
+    actor_name: "Liam",
+    title: "Receipt — Intro to Rust",
+    action_url: "/courses/intro-to-rust",
+    preferences_url: "https://cadence.test/settings",
+    course_title: "Intro to Rust",
+    amount: "$79.00",
+    seats: 1,
+    is_team_purchase: false,
+    course_url: "https://cadence.test/courses/intro-to-rust",
+    team_url: "https://cadence.test/team",
+  },
+  "new-enrollment": {
+    recipient: { email: "ines@example.com", name: "Ines" },
+    actor_name: "Liam",
+    title: "New Enrollment — Intro to Rust",
+    action_url: "/instructor/1/students",
+    preferences_url: "https://cadence.test/settings",
+    course_title: "Intro to Rust",
+    learner_name: "Liam",
+    students_url: "https://cadence.test/instructor/1/students",
+  },
 };
 
 const HTML_TAG = /<\/?[a-z][^>]*>/i;

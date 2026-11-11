@@ -43,9 +43,32 @@ export type RefundRequestToDecideData = BaseNotificationData & {
   refunds_url: string;
 };
 
+export type PurchaseConfirmedData = BaseNotificationData & {
+  course_title: string;
+  /** The amount paid, already formatted, e.g. "$79.00". */
+  amount: string;
+  /** How many places were bought: 1 for an individual purchase. */
+  seats: number;
+  /** A team purchase is for a Team Manager, who is not enrolled themselves. */
+  is_team_purchase: boolean;
+  /** Absolute link to the course. */
+  course_url: string;
+  /** Absolute link to the Team Manager's team page. */
+  team_url: string;
+};
+
+export type NewEnrollmentData = BaseNotificationData & {
+  course_title: string;
+  learner_name: string;
+  /** Absolute link to the course's students page. */
+  students_url: string;
+};
+
 export type NotificationDataMap = {
   "refund-request-raised": RefundRequestRaisedData;
   "refund-request-to-decide": RefundRequestToDecideData;
+  "purchase-confirmed": PurchaseConfirmedData;
+  "new-enrollment": NewEnrollmentData;
 };
 
 export type NotificationKey = keyof NotificationDataMap;
@@ -66,7 +89,7 @@ export type CatalogueEntry = {
   icon: string;
 };
 
-export const NOTIFICATIONS = {
+export const NOTIFICATIONS: Record<NotificationKey, CatalogueEntry> = {
   "refund-request-raised": {
     label: "Refund Request received",
     locked: true,
@@ -81,7 +104,21 @@ export const NOTIFICATIONS = {
     recipientRoles: [UserRole.Admin],
     icon: "inbox",
   },
-} satisfies Record<NotificationKey, CatalogueEntry>;
+  "purchase-confirmed": {
+    label: "Purchase receipt",
+    locked: true,
+    channels: ["email", "in_app_feed"],
+    recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
+    icon: "shopping-bag",
+  },
+  "new-enrollment": {
+    label: "New Enrollment on your course",
+    locked: false,
+    channels: ["in_app_feed"],
+    recipientRoles: [UserRole.Instructor],
+    icon: "user-plus",
+  },
+};
 
 export const NOTIFICATION_KEYS = Object.keys(
   NOTIFICATIONS
