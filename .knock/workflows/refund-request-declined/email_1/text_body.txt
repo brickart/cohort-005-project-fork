@@ -1,0 +1,9 @@
+Hi {{ recipient.name }},
+
+We declined your refund request for "{{ data.course_title }}".
+
+Why: {{ data.reason }}
+
+You still have everything you bought. If something changes, you can raise a new refund request.
+
+View your refund requests: {{ data.refund_url }}

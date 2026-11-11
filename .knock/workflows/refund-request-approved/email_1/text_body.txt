@@ -1,0 +1,10 @@
+Hi {{ recipient.name }},
+
+We approved your refund for "{{ data.course_title }}" ({{ data.amount }}).
+{{ data.amount }}, the full amount you paid, is on its way back to you.
+
+{% if data.outcome == "seats_cancelled" %}The Unclaimed Seats on your Team Licence can no longer be claimed. Seats your team has already claimed are not affected.{% elsif data.outcome == "enrollment_kept" %}You keep your place on the course through the Seat your team gave you.{% else %}Your Enrollment on the course has ended. Your progress is kept, so it will be there if you come back.{% endif %}
+{% if data.note %}
+A note from our team: {{ data.note }}
+{% endif %}
+View your refund requests: {{ data.refund_url }}

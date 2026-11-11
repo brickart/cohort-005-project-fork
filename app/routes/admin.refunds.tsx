@@ -21,6 +21,7 @@ import {
   type RefundRequestForReview,
 } from "~/lib/refunds.server";
 import { RULE_BREAK_LABELS } from "~/lib/refund-rules";
+import { kickNotificationDrainer } from "~/lib/notifications/runtime.server";
 
 const refundFilterSchema = z
   .nativeEnum(RefundStatus)
@@ -126,9 +127,8 @@ export async function action({ request }: Route.ActionArgs) {
     return data({ error: result.error }, { status: result.status });
   }
 
-  console.log(
-    `[email] to=${result.email.to} subject=${result.email.subject}\n${result.email.body}`
-  );
+  // The decision has committed, so the buyer's Notification can go out.
+  kickNotificationDrainer();
 
   return {
     success: true,
