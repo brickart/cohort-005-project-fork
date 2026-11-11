@@ -83,7 +83,9 @@ export const NOTIFICATIONS = {
   },
 } satisfies Record<NotificationKey, CatalogueEntry>;
 
-export const NOTIFICATION_KEYS = Object.keys(NOTIFICATIONS) as NotificationKey[];
+export const NOTIFICATION_KEYS = Object.keys(
+  NOTIFICATIONS
+) as NotificationKey[];
 
 export function isNotificationKey(key: string): key is NotificationKey {
   return Object.hasOwn(NOTIFICATIONS, key);

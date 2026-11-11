@@ -65,7 +65,9 @@ function enqueueOne(now = START) {
 
 /** A NotificationService that records deliveries and fails on demand. */
 function fakeService(
-  deliver: (notification: OutboundNotification) => Promise<void> = async () => {}
+  deliver: (
+    notification: OutboundNotification
+  ) => Promise<void> = async () => {}
 ) {
   const delivered: OutboundNotification[] = [];
   const service: NotificationService = {

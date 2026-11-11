@@ -70,7 +70,9 @@ export function readWorkflow(
 ): Workflow {
   const directory = join(knockDir, "workflows", key);
   const workflow = readJson(join(directory, "workflow.json"));
-  const steps = Array.isArray(workflow.steps) ? workflow.steps.map(asObject) : [];
+  const steps = Array.isArray(workflow.steps)
+    ? workflow.steps.map(asObject)
+    : [];
   const fileIn = (template: JsonObject, field: string) => {
     const relative = asString(template[`${field}@`]);
     return relative === null ? "" : join(directory, relative);

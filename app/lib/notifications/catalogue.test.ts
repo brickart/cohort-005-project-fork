@@ -114,8 +114,8 @@ describe("the Email layouts", () => {
   it("refuses to render a template that uses missing data", () => {
     const { amount: _amount, ...withoutAmount } =
       FIXTURES["refund-request-raised"];
-    expect(() =>
-      renderEmail("refund-request-raised", withoutAmount)
-    ).toThrow(/amount/);
+    expect(() => renderEmail("refund-request-raised", withoutAmount)).toThrow(
+      /amount/
+    );
   });
 });
