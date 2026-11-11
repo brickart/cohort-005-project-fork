@@ -1,6 +1,7 @@
 {
   "name": "Refund Request to decide",
   "description": "Tells every Admin that a Learner raised a Refund Request.",
+  "categories": ["cadence"],
   "settings": {
     "override_recipient_preferences": false
   },

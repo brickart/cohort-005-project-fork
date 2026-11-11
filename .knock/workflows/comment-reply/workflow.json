@@ -1,6 +1,7 @@
 {
   "name": "Reply to your comment",
   "description": "Tells the author of a lesson comment that someone replied to it.",
+  "categories": ["cadence"],
   "settings": {
     "override_recipient_preferences": false
   },

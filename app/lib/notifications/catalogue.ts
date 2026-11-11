@@ -6,7 +6,8 @@ import { UserRole } from "~/db/schema";
 // .knock/workflows/. The catalogue lives in code, not in the database.
 //
 // Adding a Notification: add its data type to NotificationDataMap, an entry to
-// NOTIFICATIONS, a workflow under .knock/workflows/<key>/, fixture data in
+// NOTIFICATIONS, a workflow under .knock/workflows/<key>/ (carrying the shared
+// "cadence" Mute category unless it is locked), fixture data in
 // catalogue.test.ts, and an enqueueNotifications call in the domain function
 // that causes it.
 

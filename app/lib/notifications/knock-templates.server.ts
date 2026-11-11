@@ -60,6 +60,8 @@ export type InAppStep = {
 export type Workflow = {
   key: string;
   overridesPreferences: boolean;
+  /** Knock preference categories, e.g. the shared Mute category. */
+  categories: string[];
   email: EmailStep | null;
   inApp: InAppStep | null;
 };
@@ -109,6 +111,11 @@ export function readWorkflow(
     key,
     overridesPreferences:
       asObject(workflow.settings).override_recipient_preferences === true,
+    categories: Array.isArray(workflow.categories)
+      ? workflow.categories.filter(
+          (category): category is string => typeof category === "string"
+        )
+      : [],
     email,
     inApp,
   };
