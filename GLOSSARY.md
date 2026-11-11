@@ -70,3 +70,11 @@ _Avoid_: Medium, Transport
 **Notification Preference**:
 A person's on/off choice for one kind of Notification on one Channel.
 _Avoid_: Subscription, Opt-out
+
+**Mute**:
+A switch, for all Channels or for one, that silences a person's Notifications without changing the Notification Preferences underneath.
+_Avoid_: Do not disturb, Pause
+
+**Locked Notification**:
+A Notification on one Channel that ignores Mute and Notification Preferences because it answers something the person did. Only some Emails are locked.
+_Avoid_: Mandatory, Transactional
