@@ -1,5 +1,9 @@
+import type { UserRole } from "~/db/schema";
 import {
   isNotificationKey,
+  NOTIFICATION_KEYS,
+  NOTIFICATIONS,
+  type CatalogueEntry,
   type Channel,
   type NotificationKey,
 } from "./catalogue";
@@ -38,6 +42,130 @@ export const DEFAULT_PREFERENCES: NotificationPreferences = {
   mutedChannels: { email: false, in_app_feed: false },
   notifications: {},
 };
+
+// ─── What /settings shows ───
+
+export type PreferenceRow = {
+  key: NotificationKey;
+  label: string;
+  /** A Locked Notification is always sent and cannot be changed. */
+  locked: boolean;
+  /** The choice underneath any Mute. Always true when locked. */
+  enabled: boolean;
+};
+
+export type PreferenceCard = {
+  channel: Channel;
+  title: string;
+  muted: boolean;
+  rows: PreferenceRow[];
+};
+
+const CHANNEL_TITLES: Record<Channel, string> = {
+  email: "Email",
+  in_app_feed: "In-app",
+};
+
+function receives(role: UserRole, key: NotificationKey, channel: Channel) {
+  const entry: CatalogueEntry = NOTIFICATIONS[key];
+  return entry.recipientRoles.includes(role) && entry.channels.includes(channel);
+}
+
+/** One card per Channel, each listing only the Notifications the role gets. */
+export function preferenceCards(
+  role: UserRole,
+  preferences: NotificationPreferences
+): PreferenceCard[] {
+  return CHANNELS.map((channel) => ({
+    channel,
+    title: CHANNEL_TITLES[channel],
+    muted: preferences.mutedChannels[channel],
+    rows: NOTIFICATION_KEYS.filter((key) => receives(role, key, channel)).map(
+      (key) => {
+        const { label, locked } = NOTIFICATIONS[key];
+        return {
+          key,
+          label,
+          locked,
+          enabled:
+            locked || preferences.notifications[key]?.[channel] !== false,
+        };
+      }
+    ),
+  }));
+}
+
+// ─── Changing them ───
+
+export type PreferenceChange =
+  | {
+      intent: "notification";
+      type: NotificationKey;
+      channel: Channel;
+      enabled: boolean;
+    }
+  | { intent: "mute-channel"; channel: Channel; muted: boolean }
+  | { intent: "mute-everything"; muted: boolean };
+
+export type PreferenceChangeResult =
+  | { ok: true; preferences: NotificationPreferences }
+  | { ok: false; status: 403; error: string };
+
+/**
+ * Applies one change from /settings. Refuses Locked Notifications, and
+ * Notifications the person's role does not receive on that Channel.
+ */
+export function changePreference(
+  preferences: NotificationPreferences,
+  role: UserRole,
+  change: PreferenceChange
+): PreferenceChangeResult {
+  switch (change.intent) {
+    case "mute-everything":
+      return {
+        ok: true,
+        preferences: { ...preferences, muteEverything: change.muted },
+      };
+    case "mute-channel":
+      return {
+        ok: true,
+        preferences: {
+          ...preferences,
+          mutedChannels: {
+            ...preferences.mutedChannels,
+            [change.channel]: change.muted,
+          },
+        },
+      };
+    case "notification": {
+      const { type, channel, enabled } = change;
+      if (NOTIFICATIONS[type].locked) {
+        return {
+          ok: false,
+          status: 403,
+          error: "This Notification is always sent.",
+        };
+      }
+      if (!receives(role, type, channel)) {
+        return {
+          ok: false,
+          status: 403,
+          error: "You don't receive this Notification on this Channel.",
+        };
+      }
+      return {
+        ok: true,
+        preferences: {
+          ...preferences,
+          notifications: {
+            ...preferences.notifications,
+            [type]: { ...preferences.notifications[type], [channel]: enabled },
+          },
+        },
+      };
+    }
+  }
+}
 
 // ─── Knock's PreferenceSet ───
 
