@@ -8,6 +8,7 @@ import {
   MessageSquareReply,
   Receipt,
   ShoppingBag,
+  Ticket,
   UserPlus,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ export const FEED_ICONS: Record<string, LucideIcon> = {
   "message-square-reply": MessageSquareReply,
   receipt: Receipt,
   "shopping-bag": ShoppingBag,
+  ticket: Ticket,
   "user-plus": UserPlus,
 };
 

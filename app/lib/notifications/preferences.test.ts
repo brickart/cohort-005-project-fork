@@ -32,6 +32,7 @@ describe("the Notification Preferences cards", () => {
       "refund-request-declined",
       "comment-reply",
       "purchase-confirmed",
+      "coupon-redeemed",
     ];
     const admin = [
       "refund-request-raised",
@@ -40,6 +41,7 @@ describe("the Notification Preferences cards", () => {
       "refund-request-declined",
       "comment-reply",
       "purchase-confirmed",
+      "coupon-redeemed",
     ];
     const instructorEmail = [
       "refund-request-raised",
@@ -48,6 +50,7 @@ describe("the Notification Preferences cards", () => {
       "lesson-question",
       "comment-reply",
       "purchase-confirmed",
+      "coupon-redeemed",
       "course-status-changed",
     ];
     // New Enrollment is In-app only, so it has no Email row.
@@ -59,6 +62,7 @@ describe("the Notification Preferences cards", () => {
       "comment-reply",
       "purchase-confirmed",
       "new-enrollment",
+      "coupon-redeemed",
       "course-status-changed",
     ];
 

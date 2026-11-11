@@ -106,6 +106,18 @@ const FIXTURES: { [K in keyof NotificationDataMap]: NotificationDataMap[K] } = {
     learner_name: "Liam",
     students_url: "https://cadence.test/instructor/1/students",
   },
+  "coupon-redeemed": {
+    recipient: { email: "tess@example.com", name: "Tess" },
+    actor_name: "Mia",
+    title: "Mia redeemed a coupon — Intro to Rust",
+    action_url: "/team",
+    preferences_url: "https://cadence.test/settings",
+    course_title: "Intro to Rust",
+    member_name: "Mia",
+    seats_claimed: 2,
+    seats_total: 5,
+    team_url: "https://cadence.test/team",
+  },
   "course-status-changed": {
     recipient: { email: "ines@example.com", name: "Ines" },
     actor_name: "Pat",
