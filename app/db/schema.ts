@@ -7,6 +7,7 @@ import {
   uniqueIndex,
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
+import type { NotificationKey } from "~/lib/notifications/catalogue";
 
 export enum UserRole {
   Student = "student",
@@ -392,7 +393,7 @@ export const notificationOutbox = sqliteTable(
     // because ids restart after a DB reset.
     idempotencyKey: text("idempotency_key").notNull().unique(),
     // The catalogue key, which is also the Knock workflow key.
-    type: text("type").notNull(),
+    type: text("type").notNull().$type<NotificationKey>(),
     recipientId: integer("recipient_id")
       .notNull()
       .references(() => users.id),

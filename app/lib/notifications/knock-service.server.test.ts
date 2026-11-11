@@ -4,7 +4,10 @@ import {
   DEFAULT_PREFERENCES,
   type NotificationPreferences,
 } from "./preferences";
-import { isRetryableDeliveryError } from "./service.server";
+import {
+  isRetryableDeliveryError,
+  type OutboundNotification,
+} from "./service.server";
 
 // The Knock NotificationService, against a fake Knock API. The fake answers
 // HTTP the way Knock's REST API does, so these tests pin down what Cadence
@@ -59,7 +62,7 @@ function fakeKnock(handler: Handler = () => undefined) {
   return { service, requests };
 }
 
-const refundRaised = {
+const refundRaised: OutboundNotification = {
   idempotencyKey: "0d7b3c9e-6f0a-4c55-9d2e-5b8f1f6f2a11",
   type: "refund-request-raised",
   recipientId: 42,

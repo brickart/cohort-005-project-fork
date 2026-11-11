@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { isNotificationKey, NOTIFICATIONS, type Channel } from "./catalogue";
+import { NOTIFICATIONS, type Channel } from "./catalogue";
 import {
   DEFAULT_KNOCK_DIR,
   readWorkflow,
@@ -16,7 +16,6 @@ import {
   type KnockPreferenceSet,
 } from "./preferences";
 import {
-  NotificationDeliveryError,
   type Feed,
   type FeedItem,
   type NotificationService,
@@ -120,10 +119,6 @@ export function createLocalNotificationService(
   return {
     async deliver(notification) {
       const { type, data, recipientId, idempotencyKey } = notification;
-      if (!isNotificationKey(type)) {
-        throw new NotificationDeliveryError(`No workflow called ${type}`, 404);
-      }
-
       const store = load();
       if (store.deliveredKeys.includes(idempotencyKey)) return;
 
