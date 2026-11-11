@@ -1,5 +1,6 @@
 import Knock, { APIError } from "@knocklabs/node";
 import { z } from "zod";
+import { htmlToText } from "./feed-text.server";
 import {
   CHANNELS,
   DEFAULT_PREFERENCES,
@@ -81,31 +82,6 @@ type KnockFeedPage = {
 
 function feedPath(feedChannelId: string, userId: number) {
   return `/v1/users/${encodeURIComponent(String(userId))}/feeds/${encodeURIComponent(feedChannelId)}`;
-}
-
-const ENTITIES: Record<string, string> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  nbsp: " ",
-};
-
-/** Knock renders the markdown body to HTML; the bell shows plain text. */
-function htmlToText(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (entity, name: string) => {
-      if (name.startsWith("#x") || name.startsWith("#X")) {
-        return String.fromCodePoint(parseInt(name.slice(2), 16));
-      }
-      if (name.startsWith("#")) {
-        return String.fromCodePoint(parseInt(name.slice(1), 10));
-      }
-      return ENTITIES[name.toLowerCase()] ?? entity;
-    })
-    .trim();
 }
 
 function toFeedItem(entry: KnockFeedEntry): FeedItem {

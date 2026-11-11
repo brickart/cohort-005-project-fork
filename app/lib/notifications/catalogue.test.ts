@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   NOTIFICATION_KEYS,
@@ -168,6 +169,15 @@ describe.each(NOTIFICATION_KEYS)("the %s workflow", (key) => {
       else expect(layout).not.toBe("cadence-locked");
     }
   );
+
+  it("escapes every value its In-app step prints, as the HTML bodies do", () => {
+    const { inApp } = readWorkflow(key);
+    const markdown = inApp ? readFileSync(inApp.markdownBodyPath, "utf8") : "";
+    const outputs = markdown.match(/\{\{[^}]*\}\}/g) ?? [];
+
+    expect(outputs.length).toBeGreaterThan(0);
+    for (const output of outputs) expect(output).toMatch(/\|\s*escape\b/);
+  });
 
   it("renders its In-app step against fixture data", () => {
     const inApp = renderInApp(key, FIXTURES[key]);

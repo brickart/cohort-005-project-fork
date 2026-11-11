@@ -1,1 +1,1 @@
-We declined your refund request for {{ data.course_title }}.
+We declined your refund request for {{ data.course_title | escape }}.

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { NOTIFICATIONS, type Channel } from "./catalogue";
+import { markdownToText } from "./feed-text.server";
 import {
   DEFAULT_KNOCK_DIR,
   readWorkflow,
@@ -143,7 +144,8 @@ export function createLocalNotificationService(
           userId: recipientId,
           type,
           title: typeof data.title === "string" ? data.title : type,
-          body: inApp.body,
+          // What Knock's feed gives back: the markdown rendered, as text.
+          body: markdownToText(inApp.body),
           actionUrl: inApp.actionUrl || null,
           insertedAt: at.toISOString(),
           readAt: null,

@@ -50,6 +50,17 @@ function memoryService() {
 }
 
 describe("the local NotificationService, in memory", () => {
+  it("shows names in the feed as written, the way Knock's feed does", async () => {
+    const service = memoryService();
+    await service.deliver(toDecide(PAT, "Ana <b>&</b> Co"));
+
+    const [item] = (await service.getFeed(PAT)).items;
+
+    expect(item.body).toBe(
+      "Ana <b>&</b> Co asked for a refund on Intro to Rust."
+    );
+  });
+
   it("returns a person's feed newest first with an unread count", async () => {
     const service = memoryService();
     await service.deliver(toDecide(PAT, "Liam"));
@@ -253,7 +264,10 @@ describe("the local NotificationService's Notification Preferences", () => {
     expect((await service.getFeed(PAT)).items).toHaveLength(0);
 
     const muted = await service.getPreferences(PAT);
-    expect(muted).toMatchObject({ muteEverything: true, notifications: choices });
+    expect(muted).toMatchObject({
+      muteEverything: true,
+      notifications: choices,
+    });
     await service.setPreferences(PAT, { ...muted, muteEverything: false });
 
     await service.deliver(toDecide(PAT, "Ben"));

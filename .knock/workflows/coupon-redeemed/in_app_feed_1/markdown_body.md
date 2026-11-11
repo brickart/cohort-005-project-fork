@@ -1,1 +1,1 @@
-{{ data.member_name }} redeemed a coupon for {{ data.course_title }}.
+{{ data.member_name | escape }} redeemed a coupon for {{ data.course_title | escape }}.
