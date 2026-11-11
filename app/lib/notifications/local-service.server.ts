@@ -26,7 +26,9 @@ import {
 // Stands in for Knock when there are no credentials: in dev (a gitignored
 // JSON store) and always under vitest (memory). It renders Emails from
 // .knock/ and writes them to .outbox/, and keeps each person's feed with read
-// state, so the bell works when you switch users in the DevUI panel.
+// state, so the bell works when you switch users in the DevUI panel. It keeps
+// Notification Preferences as Knock PreferenceSets and honours them the way
+// Knock does (see preferences.ts).
 
 const FROM_ADDRESS = "Cadence <hello@cadence.dev>";
 
