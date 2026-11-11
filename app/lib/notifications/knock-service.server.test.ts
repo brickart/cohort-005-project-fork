@@ -367,6 +367,33 @@ describe("Notification Preferences in Knock", () => {
     expect(await service.getPreferences(42)).toEqual(DEFAULT_PREFERENCES);
   });
 
+  it("ignores the parts of a PreferenceSet Cadence doesn't use", async () => {
+    const { service } = fakeKnock(() => ({
+      status: 200,
+      body: {
+        id: "default",
+        channel_types: {
+          email: { conditions: [{ variable: "x", operator: "equal_to" }] },
+          in_app_feed: false,
+        },
+        workflows: {
+          "lesson-question": "nonsense",
+          "comment-reply": { conditions: [] },
+          "course-status-changed": true,
+        },
+        categories: { cadence: { channel_types: { email: "yes" } } },
+      },
+    }));
+
+    expect(await service.getPreferences(42)).toEqual({
+      ...DEFAULT_PREFERENCES,
+      mutedChannels: { email: false, in_app_feed: true },
+      notifications: {
+        "course-status-changed": { email: true, in_app_feed: true },
+      },
+    });
+  });
+
   it("reads the defaults for a person Knock doesn't know yet", async () => {
     const { service } = fakeKnock(() => ({
       status: 404,

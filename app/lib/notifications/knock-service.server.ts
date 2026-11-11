@@ -1,5 +1,5 @@
 import Knock, { APIError } from "@knocklabs/node";
-import type { PreferenceSet } from "@knocklabs/node/resources/recipients/preferences";
+import { z } from "zod";
 import {
   CHANNELS,
   DEFAULT_PREFERENCES,
@@ -129,47 +129,53 @@ function toFeedItem(entry: KnockFeedEntry): FeedItem {
 /** Cadence keeps everything in each person's default PreferenceSet. */
 const PREFERENCE_SET_ID = "default";
 
-function asChannelChoices(value: unknown): ChannelChoices {
-  const choices: ChannelChoices = {};
-  if (typeof value !== "object" || value === null) return choices;
-  for (const channel of CHANNELS) {
-    const choice: unknown = (value as Record<string, unknown>)[channel];
-    if (typeof choice === "boolean") choices[channel] = choice;
-  }
-  return choices;
-}
+/** A choice Cadence can't read (such as a condition) counts as no choice. */
+const channelChoice = z.boolean().optional().catch(undefined);
 
-function asSettings(
-  value: unknown
-): Record<string, boolean | { channel_types: ChannelChoices }> {
-  const settings: Record<string, boolean | { channel_types: ChannelChoices }> =
-    {};
-  if (typeof value !== "object" || value === null) return settings;
-  for (const [key, setting] of Object.entries(value)) {
-    if (typeof setting === "boolean") {
-      settings[key] = setting;
-    } else if (typeof setting === "object" && setting !== null) {
-      settings[key] = {
-        channel_types: asChannelChoices(
-          (setting as Record<string, unknown>).channel_types
-        ),
-      };
+const channelChoicesSchema = z
+  .object({ email: channelChoice, in_app_feed: channelChoice })
+  .nullish()
+  .catch(null)
+  .transform((value) => {
+    const choices: ChannelChoices = {};
+    for (const channel of CHANNELS) {
+      const choice = value?.[channel];
+      if (choice !== undefined) choices[channel] = choice;
     }
-  }
-  return settings;
-}
+    return choices;
+  });
+
+/** A setting Cadence can't read counts as no setting. */
+const settingSchema = z
+  .union([z.boolean(), z.object({ channel_types: channelChoicesSchema })])
+  .optional()
+  .catch(undefined);
+
+const settingsSchema = z
+  .record(z.string(), settingSchema)
+  .nullish()
+  .catch(null)
+  .transform((value) => {
+    const settings: KnockPreferenceSet["workflows"] = {};
+    for (const [key, setting] of Object.entries(value ?? {})) {
+      if (setting !== undefined) settings[key] = setting;
+    }
+    return settings;
+  });
 
 /**
  * Knock's PreferenceSet, cut down to the parts Cadence uses. Channel types
  * Cadence doesn't send on, conditions and per-channel settings are ignored.
  */
-function asCadencePreferenceSet(set: PreferenceSet): KnockPreferenceSet {
-  return {
-    channel_types: asChannelChoices(set.channel_types),
-    workflows: asSettings(set.workflows),
-    categories: asSettings(set.categories),
-  };
-}
+const cadencePreferenceSetSchema: z.ZodType<
+  KnockPreferenceSet,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  channel_types: channelChoicesSchema,
+  workflows: settingsSchema,
+  categories: settingsSchema,
+});
 
 // ─── Errors ───
 
@@ -256,7 +262,7 @@ export function createKnockNotificationService(
           String(userId),
           PREFERENCE_SET_ID
         );
-        return fromKnockPreferenceSet(asCadencePreferenceSet(set));
+        return fromKnockPreferenceSet(cadencePreferenceSetSchema.parse(set));
       } catch (error) {
         // Knock doesn't know this person yet: nothing has been sent to them.
         if (error instanceof APIError && error.status === 404) {
