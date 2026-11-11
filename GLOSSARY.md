@@ -80,5 +80,5 @@ A switch, for all Channels or for one, that silences a person's Notifications wi
 _Avoid_: Do not disturb, Pause
 
 **Locked Notification**:
-A Notification on one Channel that ignores Mute and Notification Preferences because it answers something the person did. Only some Emails are locked.
+A Notification that ignores Mute and Notification Preferences because it answers something the person did. The whole Notification is locked, on every Channel it uses: its Email and its In-app copy both always arrive.
 _Avoid_: Mandatory, Transactional
