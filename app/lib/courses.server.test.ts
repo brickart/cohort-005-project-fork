@@ -67,3 +67,102 @@ describe("changing a course's status", () => {
     ).toMatchObject({ ok: false, status: 404 });
   });
 });
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+describe("the Notification a course status change causes", () => {
+  it("tells the Instructor when an Admin archives their course", () => {
+    changeCourseStatus(db, base.course.id, CourseStatus.Archived, admin.id, NOW);
+
+    const rows = outboxRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      type: "course-status-changed",
+      recipientId: base.instructor.id,
+      actorId: admin.id,
+      status: "pending",
+      data: {
+        recipient: { email: "instructor@example.com", name: "Test Instructor" },
+        actor_name: "Pat Admin",
+        title: "Test Course was archived",
+        course_title: "Test Course",
+        status: "archived",
+        action_url: `/instructor/${base.course.id}`,
+        course_url: `https://cadence.test/instructor/${base.course.id}`,
+        preferences_url: "https://cadence.test/settings",
+      },
+    });
+    expect(rows[0].idempotencyKey).toMatch(UUID);
+  });
+
+  it("tells the Instructor when an Admin publishes their course", () => {
+    db.update(schema.courses)
+      .set({ status: CourseStatus.Draft })
+      .where(eq(schema.courses.id, base.course.id))
+      .run();
+
+    changeCourseStatus(db, base.course.id, CourseStatus.Published, admin.id, NOW);
+
+    expect(outboxRows()).toMatchObject([
+      {
+        type: "course-status-changed",
+        recipientId: base.instructor.id,
+        data: { title: "Test Course was published", status: "published" },
+      },
+    ]);
+  });
+
+  it("says nothing when a course goes back to draft", () => {
+    changeCourseStatus(db, base.course.id, CourseStatus.Draft, admin.id, NOW);
+
+    expect(outboxRows()).toEqual([]);
+  });
+
+  it("says nothing when the status does not actually change", () => {
+    changeCourseStatus(db, base.course.id, CourseStatus.Published, admin.id, NOW);
+
+    expect(outboxRows()).toEqual([]);
+  });
+
+  it("does not tell an Instructor about their own change", () => {
+    changeCourseStatus(
+      db,
+      base.course.id,
+      CourseStatus.Archived,
+      base.instructor.id,
+      NOW
+    );
+
+    expect(getCourse()?.status).toBe(CourseStatus.Archived);
+    expect(outboxRows()).toEqual([]);
+  });
+
+  it("does not notify an Admin who is also the course's Instructor", () => {
+    db.update(schema.courses)
+      .set({ instructorId: admin.id })
+      .where(eq(schema.courses.id, base.course.id))
+      .run();
+
+    changeCourseStatus(db, base.course.id, CourseStatus.Archived, admin.id, NOW);
+
+    expect(outboxRows()).toEqual([]);
+  });
+
+  it("writes nothing when the change rolls back", () => {
+    expect(() =>
+      db.transaction((tx) => {
+        changeCourseStatus(
+          tx,
+          base.course.id,
+          CourseStatus.Archived,
+          admin.id,
+          NOW
+        );
+        throw new Error("rolled back");
+      })
+    ).toThrow("rolled back");
+
+    expect(getCourse()?.status).toBe(CourseStatus.Published);
+    expect(outboxRows()).toEqual([]);
+  });
+});
