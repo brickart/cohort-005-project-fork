@@ -5,11 +5,7 @@ import type { Route } from "./+types/courses.$slug.lessons.$lessonId";
 import { getCurrentUserId } from "~/lib/session";
 import { getAccess, requireContentAccess } from "~/lib/access.server";
 import { renderComment } from "~/lib/comment-markdown.server";
-import {
-  assertValidCommentBody,
-  postComment,
-} from "~/lib/comments.server";
-import { kickNotificationDrainer } from "~/lib/notifications/runtime.server";
+import { assertValidCommentBody, postComment } from "~/lib/comments.server";
 import {
   CommentThread,
   type RenderedComment,
@@ -865,7 +861,6 @@ export async function action({ params, request }: Route.ActionArgs) {
           parsed.data.parentId ?? null,
           parsed.data.body
         );
-        kickNotificationDrainer();
         return { ok: true };
       }
 

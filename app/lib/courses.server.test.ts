@@ -3,7 +3,10 @@ import { eq } from "drizzle-orm";
 import { createTestDb, seedBaseData } from "~/test/setup";
 import * as schema from "~/db/schema";
 import { CourseStatus, UserRole } from "~/db/schema";
-import { changeCourseStatus } from "./courses.server";
+import {
+  changeCourseStatus,
+  changeCourseStatusForAction,
+} from "./courses.server";
 
 type TestDb = ReturnType<typeof createTestDb>;
 
@@ -19,7 +22,11 @@ beforeEach(() => {
   base = seedBaseData(db);
   admin = db
     .insert(schema.users)
-    .values({ name: "Pat Admin", email: "pat@example.com", role: UserRole.Admin })
+    .values({
+      name: "Pat Admin",
+      email: "pat@example.com",
+      role: UserRole.Admin,
+    })
     .returning()
     .get();
 });
@@ -66,13 +73,41 @@ describe("changing a course's status", () => {
       changeCourseStatus(db, 9999, CourseStatus.Archived, admin.id, NOW)
     ).toMatchObject({ ok: false, status: 404 });
   });
+
+  it("answers a route action with a 404 for a course that does not exist", () => {
+    let thrown: unknown;
+    try {
+      changeCourseStatusForAction(db, 9999, CourseStatus.Archived, admin.id);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toMatchObject({ init: { status: 404 } });
+  });
+
+  it("changes the status for a route action", () => {
+    changeCourseStatusForAction(
+      db,
+      base.course.id,
+      CourseStatus.Archived,
+      admin.id
+    );
+
+    expect(getCourse()?.status).toBe(CourseStatus.Archived);
+  });
 });
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 describe("the Notification a course status change causes", () => {
   it("tells the Instructor when an Admin archives their course", () => {
-    changeCourseStatus(db, base.course.id, CourseStatus.Archived, admin.id, NOW);
+    changeCourseStatus(
+      db,
+      base.course.id,
+      CourseStatus.Archived,
+      admin.id,
+      NOW
+    );
 
     const rows = outboxRows();
     expect(rows).toHaveLength(1);
@@ -101,7 +136,13 @@ describe("the Notification a course status change causes", () => {
       .where(eq(schema.courses.id, base.course.id))
       .run();
 
-    changeCourseStatus(db, base.course.id, CourseStatus.Published, admin.id, NOW);
+    changeCourseStatus(
+      db,
+      base.course.id,
+      CourseStatus.Published,
+      admin.id,
+      NOW
+    );
 
     expect(outboxRows()).toMatchObject([
       {
@@ -119,7 +160,13 @@ describe("the Notification a course status change causes", () => {
   });
 
   it("says nothing when the status does not actually change", () => {
-    changeCourseStatus(db, base.course.id, CourseStatus.Published, admin.id, NOW);
+    changeCourseStatus(
+      db,
+      base.course.id,
+      CourseStatus.Published,
+      admin.id,
+      NOW
+    );
 
     expect(outboxRows()).toEqual([]);
   });
@@ -143,7 +190,13 @@ describe("the Notification a course status change causes", () => {
       .where(eq(schema.courses.id, base.course.id))
       .run();
 
-    changeCourseStatus(db, base.course.id, CourseStatus.Archived, admin.id, NOW);
+    changeCourseStatus(
+      db,
+      base.course.id,
+      CourseStatus.Archived,
+      admin.id,
+      NOW
+    );
 
     expect(outboxRows()).toEqual([]);
   });

@@ -1,1 +1,1 @@
-{{ data.course_title }} was {{ data.status }}.
+{{ data.course_title | escape }} was {{ data.status | escape }}.

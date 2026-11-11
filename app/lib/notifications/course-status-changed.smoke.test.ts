@@ -26,7 +26,11 @@ describe("archiving a course, end to end", () => {
     const { instructor, course } = seedBaseData(db);
     const admin = db
       .insert(schema.users)
-      .values({ name: "Pat Admin", email: "pat@example.com", role: UserRole.Admin })
+      .values({
+        name: "Pat Admin",
+        email: "pat@example.com",
+        role: UserRole.Admin,
+      })
       .returning()
       .get();
     const now = new Date();
@@ -54,7 +58,7 @@ describe("archiving a course, end to end", () => {
       layout: "default",
     });
     expect(email.text).toContain("Hi Test Instructor,");
-    expect(email.text).toContain("Pat Admin archived your course");
+    expect(email.text).toContain("was archived by Pat Admin.");
     expect(email.text).toContain("new Learners can't enroll");
     expect(email.html).toContain(
       `href="https://cadence.test/instructor/${course.id}"`

@@ -9,7 +9,14 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { kickDrainerAfterWrites } from "~/lib/notifications/drainer-kick.server";
+import { kickNotificationDrainer } from "~/lib/notifications/runtime.server";
 import "./app.css";
+
+// Delivers the Notifications a write enqueued, once its action has committed.
+export const middleware: Route.MiddlewareFunction[] = [
+  kickDrainerAfterWrites(kickNotificationDrainer),
+];
 
 const darkModeScript = `
 (function() {
@@ -86,10 +93,14 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   if (isRouteErrorResponse(error)) {
     if (error.status === 404) {
       title = "Page not found";
-      message = "The page you're looking for doesn't exist or may have been moved.";
+      message =
+        "The page you're looking for doesn't exist or may have been moved.";
     } else {
       title = `Error ${error.status}`;
-      message = typeof error.data === "string" ? error.data : (error.statusText || message);
+      message =
+        typeof error.data === "string"
+          ? error.data
+          : error.statusText || message;
     }
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     message = error.message;

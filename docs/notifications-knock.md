@@ -23,6 +23,27 @@ Everything Knock is server-side (`@knocklabs/node`); no key, token or socket
 reaches the browser. The Knock user id is `String(user.id)`; recipients are
 identified inline when a workflow is triggered.
 
+## Keys that must match the Knock dashboard
+
+- **The `cadence` layout is keyed `default`.** It lives in
+  `.knock/layouts/default/` (name "Cadence"), and every non-locked Email
+  step uses `"layout_key": "default"`. Locked Emails use `cadence-locked`.
+  Don't rename the directory or key to `cadence`: the workflows would point
+  at a layout Knock doesn't have.
+- **`"channel_key": "in-app-feed"`** in every workflow's In-app step must be
+  the key of the In-app feed channel in the Knock dashboard (Integrations →
+  Channels). If the dashboard channel has another key, the In-app step
+  doesn't reach the feed Cadence reads. `KNOCK_FEED_CHANNEL_ID` is that same
+  channel's id (a UUID), which the feed API needs.
+
+## The drainer at boot
+
+`app/entry.server.tsx` starts the drainer (a sweep at boot, then about once
+a minute). `react-router dev` would only load it on the first request, so
+`vite.config.ts` has a small dev-only plugin that loads the server build as
+soon as the dev server is listening. `npm run dev`, `npm run dev:knock` and
+`npm run start` therefore all sweep the outbox at boot.
+
 `dev:knock` runs Node with
 `--network-family-autoselection-attempt-timeout=500`: in the prototype a new
 connection to Knock took about 7 s while Node fell back from IPv6 to IPv4.

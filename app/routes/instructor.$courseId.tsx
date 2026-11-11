@@ -11,8 +11,7 @@ import type { Route } from "./+types/instructor.$courseId";
 import { getCurrentUserId } from "~/lib/session";
 import { CourseStatus, UserRole } from "~/db/schema";
 import { db } from "~/db";
-import { changeCourseStatus } from "~/lib/courses.server";
-import { kickNotificationDrainer } from "~/lib/notifications/runtime.server";
+import { changeCourseStatusForAction } from "~/lib/courses.server";
 import {
   courses,
   categories,
@@ -686,18 +685,12 @@ export async function action({ params, request }: Route.ActionArgs) {
   }
 
   if (intent === "update-status") {
-    const result = changeCourseStatus(
+    changeCourseStatusForAction(
       db,
       courseId,
       parsed.data.status,
-      currentUserId,
-      new Date()
+      currentUserId
     );
-    if (!result.ok) {
-      throw data(result.error, { status: result.status });
-    }
-    // The status change has committed, so its Notification can go out.
-    kickNotificationDrainer();
     return { success: true, field: "status" };
   }
 

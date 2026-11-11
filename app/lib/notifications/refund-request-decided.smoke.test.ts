@@ -29,7 +29,11 @@ function setUp() {
   const { user, course } = seedBaseData(db);
   const admin = db
     .insert(schema.users)
-    .values({ name: "Pat Admin", email: "pat@example.com", role: UserRole.Admin })
+    .values({
+      name: "Pat Admin",
+      email: "pat@example.com",
+      role: UserRole.Admin,
+    })
     .returning()
     .get();
   const now = new Date();
@@ -93,7 +97,10 @@ describe("deciding a Refund Request, end to end", () => {
       readAt: null,
     });
 
-    const email = emailTo("test@example.com", "Refund approved — Test Course");
+    const email = emailTo(
+      "test@example.com",
+      "We approved your refund for Test Course ($79.00)"
+    );
     expect(email).toMatchObject({ layout: "cadence-locked" });
     expect(email.text).toContain("Hi Test User,");
     expect(email.text).toContain(
@@ -124,7 +131,10 @@ describe("deciding a Refund Request, end to end", () => {
       actionUrl: "/settings",
     });
 
-    const email = emailTo("test@example.com", "Refund declined — Test Course");
+    const email = emailTo(
+      "test@example.com",
+      "We declined your refund request for Test Course"
+    );
     expect(email).toMatchObject({ layout: "cadence-locked" });
     expect(email.text).toContain(
       'We declined your refund request for "Test Course".'

@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type {
   RefundRequestRaisedData,
   RefundRequestToDecideData,
 } from "./catalogue";
-import { applyBellAction, readBell } from "./bell.server";
+import { applyBellAction, readBell, readBellOrNothing } from "./bell.server";
 import { createLocalNotificationService } from "./local-service.server";
-import type { OutboundNotification } from "./service.server";
+import type {
+  NotificationService,
+  OutboundNotification,
+} from "./service.server";
 
 const LIAM = 3;
 const PAT = 7;
@@ -161,5 +164,51 @@ describe("the bell", () => {
     await expect(
       applyBellAction(service, PAT, form({ intent: "delete-everything" }))
     ).rejects.toMatchObject({ init: { status: 400 } });
+  });
+});
+
+describe("the bell when the NotificationService is in trouble", () => {
+  function quietly() {
+    return vi.spyOn(console, "error").mockImplementation(() => {});
+  }
+
+  it("shows no bell, and logs why, when the service fails", async () => {
+    const logged = quietly();
+    const service: NotificationService = {
+      ...memoryService(),
+      getFeed: async () => {
+        throw new Error("Knock is down");
+      },
+    };
+
+    expect(await readBellOrNothing(service, LIAM)).toBeNull();
+    expect(logged).toHaveBeenCalledWith(
+      expect.stringContaining("[notifications]"),
+      expect.objectContaining({ message: "Knock is down" })
+    );
+    logged.mockRestore();
+  });
+
+  it("shows no bell rather than wait when the service hangs", async () => {
+    const logged = quietly();
+    const service: NotificationService = {
+      ...memoryService(),
+      getFeed: () => new Promise(() => {}),
+    };
+
+    expect(
+      await readBellOrNothing(service, LIAM, { timeoutMs: 10 })
+    ).toBeNull();
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  it("shows the bell as usual when the service answers", async () => {
+    const service = memoryService();
+    await service.deliver(raised(LIAM));
+
+    expect(await readBellOrNothing(service, LIAM)).toMatchObject({
+      unreadCount: 1,
+    });
   });
 });

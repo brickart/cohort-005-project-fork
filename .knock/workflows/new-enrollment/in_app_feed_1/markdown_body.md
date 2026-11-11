@@ -1,1 +1,1 @@
-{{ data.learner_name }} enrolled on {{ data.course_title }}.
+{{ data.learner_name | escape }} enrolled on {{ data.course_title | escape }}.

@@ -57,7 +57,7 @@ describe("completing a purchase, end to end", () => {
     expect(emails).toHaveLength(1);
     expect(emails[0]).toMatchObject({
       to: "test@example.com",
-      subject: "Receipt — Test Course",
+      subject: "You paid $79.00 for Test Course",
       layout: "cadence-locked",
     });
     expect(emails[0].text).toContain('You paid $79.00 for "Test Course".');

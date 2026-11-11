@@ -4,6 +4,7 @@
 // dev and tests (local-service.server.ts). Nothing outside this seam knows
 // which one is in use.
 
+import type { NotificationKey } from "./catalogue";
 import type { NotificationPreferences } from "./preferences";
 
 /** One outbox row, handed over for delivery. `data` is forwarded as-is. */
@@ -11,7 +12,7 @@ export type OutboundNotification = {
   /** Sent as Knock's Idempotency-Key. */
   idempotencyKey: string;
   /** The catalogue key, which is also the Knock workflow key. */
-  type: string;
+  type: NotificationKey;
   recipientId: number;
   actorId: number | null;
   data: Record<string, unknown>;
@@ -20,7 +21,10 @@ export type OutboundNotification = {
 /** One In-app Notification in a person's feed. */
 export type FeedItem = {
   id: string;
-  /** The catalogue key it came from. */
+  /**
+   * The workflow key it came from. A string, because Knock may hold workflows
+   * Cadence's catalogue doesn't know; the bell narrows it to a catalogue key.
+   */
   type: string;
   title: string;
   body: string;

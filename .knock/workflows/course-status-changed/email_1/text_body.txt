@@ -1,6 +1,6 @@
 Hi {{ recipient.name }},
 
-{{ data.actor_name }} {{ data.status }} your course "{{ data.course_title }}".
+Your course "{{ data.course_title }}" was {{ data.status }} by {{ data.actor_name }}.
 
 {% if data.status == "published" %}It is now live in the catalogue, and Learners can find it and enroll.{% else %}It no longer appears in the catalogue, and new Learners can't enroll. Learners already enrolled keep their access.{% endif %}
 

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   NOTIFICATION_KEYS,
@@ -9,6 +10,7 @@ import {
   renderEmail,
   renderInApp,
 } from "./knock-templates.server";
+import { htmlToText, markdownToText } from "./feed-text.server";
 import { MUTE_CATEGORY } from "./preferences";
 
 // The catalogue and the Knock workflows in .knock/ must agree, or a
@@ -169,6 +171,15 @@ describe.each(NOTIFICATION_KEYS)("the %s workflow", (key) => {
     }
   );
 
+  it("escapes every value its In-app step prints, as the HTML bodies do", () => {
+    const { inApp } = readWorkflow(key);
+    const markdown = inApp ? readFileSync(inApp.markdownBodyPath, "utf8") : "";
+    const outputs = markdown.match(/\{\{[^}]*\}\}/g) ?? [];
+
+    expect(outputs.length).toBeGreaterThan(0);
+    for (const output of outputs) expect(output).toMatch(/\|\s*escape\b/);
+  });
+
   it("renders its In-app step against fixture data", () => {
     const inApp = renderInApp(key, FIXTURES[key]);
     expect(inApp.body).not.toBe("");
@@ -178,13 +189,37 @@ describe.each(NOTIFICATION_KEYS)("the %s workflow", (key) => {
   it.runIf(sendsEmail)("renders its Email against fixture data", () => {
     const email = renderEmail(key, FIXTURES[key]);
 
-    expect(email.subject).toBe(FIXTURES[key].title);
     expect(email.bodyHtml).not.toMatch(/<html|<body/i);
     expect(email.bodyHtml).toMatch(/^\s*<p>Hi [^<]+,<\/p>/);
     expect(email.html).toMatch(/<html/i);
     expect(email.text).not.toMatch(HTML_TAG);
     expect(email.text).toMatch(/^Hi .+,/m);
   });
+
+  // Spec #20: "The Email subject and opening line restate" the In-app
+  // sentence, so the two Channels read as one message.
+  it.runIf(sendsEmail)(
+    "restates its In-app sentence in the Email subject and opening line",
+    () => {
+      const sentence = markdownToText(
+        renderInApp(key, FIXTURES[key]).body
+      ).replace(/\.$/, "");
+      const email = renderEmail(key, FIXTURES[key]);
+      const unquoted = (line: string) => line.replaceAll('"', "");
+
+      const htmlOpening = htmlToText(
+        email.bodyHtml.match(/<p>[\s\S]*?<\/p>/g)?.[1] ?? ""
+      );
+      const textLines = email.text.split("\n").map((line) => line.trim());
+      const greeting = textLines.findIndex((line) => /^Hi .+,$/.test(line));
+      const textOpening =
+        textLines.slice(greeting + 1).find((line) => line !== "") ?? "";
+
+      expect(email.subject).toBe(sentence);
+      expect(unquoted(htmlOpening)).toContain(sentence);
+      expect(unquoted(textOpening)).toContain(sentence);
+    }
+  );
 });
 
 describe("the Email layouts", () => {

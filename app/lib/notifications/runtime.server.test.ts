@@ -19,14 +19,14 @@ describe("which NotificationService Cadence runs", () => {
     });
   });
 
-  it("is always local under vitest, even with Knock credentials", () => {
+  it("is local and in memory under vitest, even with Knock credentials", () => {
     expect(
       notificationServiceChoice({
         VITEST: "true",
         KNOCK_API_SECRET_KEY: "sk_test_123",
         KNOCK_FEED_CHANNEL_ID: "feed-uuid",
       })
-    ).toEqual({ kind: "local" });
+    ).toEqual({ kind: "memory" });
   });
 
   it("refuses a Knock secret key without a feed channel", () => {

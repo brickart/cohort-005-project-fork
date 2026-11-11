@@ -4,7 +4,10 @@ import {
   DEFAULT_PREFERENCES,
   type NotificationPreferences,
 } from "./preferences";
-import { isRetryableDeliveryError } from "./service.server";
+import {
+  isRetryableDeliveryError,
+  type OutboundNotification,
+} from "./service.server";
 
 // The Knock NotificationService, against a fake Knock API. The fake answers
 // HTTP the way Knock's REST API does, so these tests pin down what Cadence
@@ -59,7 +62,7 @@ function fakeKnock(handler: Handler = () => undefined) {
   return { service, requests };
 }
 
-const refundRaised = {
+const refundRaised: OutboundNotification = {
   idempotencyKey: "0d7b3c9e-6f0a-4c55-9d2e-5b8f1f6f2a11",
   type: "refund-request-raised",
   recipientId: 42,
@@ -365,6 +368,33 @@ describe("Notification Preferences in Knock", () => {
     }));
 
     expect(await service.getPreferences(42)).toEqual(DEFAULT_PREFERENCES);
+  });
+
+  it("ignores the parts of a PreferenceSet Cadence doesn't use", async () => {
+    const { service } = fakeKnock(() => ({
+      status: 200,
+      body: {
+        id: "default",
+        channel_types: {
+          email: { conditions: [{ variable: "x", operator: "equal_to" }] },
+          in_app_feed: false,
+        },
+        workflows: {
+          "lesson-question": "nonsense",
+          "comment-reply": { conditions: [] },
+          "course-status-changed": true,
+        },
+        categories: { cadence: { channel_types: { email: "yes" } } },
+      },
+    }));
+
+    expect(await service.getPreferences(42)).toEqual({
+      ...DEFAULT_PREFERENCES,
+      mutedChannels: { email: false, in_app_feed: true },
+      notifications: {
+        "course-status-changed": { email: true, in_app_feed: true },
+      },
+    });
   });
 
   it("reads the defaults for a person Knock doesn't know yet", async () => {
