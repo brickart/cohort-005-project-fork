@@ -6,8 +6,9 @@ import type { NotificationService } from "./service.server";
 
 // ─── Notifications in the running app ───
 // Picks the NotificationService and runs the drainer inside the app server
-// process. There is no separate worker: callers kick the drainer after their
-// transaction commits, and it also sweeps at boot and about once a minute.
+// process. There is no separate worker: the root middleware kicks the drainer
+// after every write request (drainer-kick.server.ts), and it also sweeps at
+// boot and about once a minute.
 
 const SWEEP_INTERVAL_MS = 60_000;
 
@@ -74,8 +75,8 @@ function createNotificationService(
 }
 
 /**
- * Delivers whatever is due, without making the caller wait. Call it after the
- * transaction that enqueued Notifications has committed.
+ * Delivers whatever is due, without making the caller wait. Never call it
+ * inside a transaction; the root middleware calls it after each write.
  */
 export function kickNotificationDrainer(): void {
   deliverPending(db, getNotificationService()).catch((error: unknown) => {

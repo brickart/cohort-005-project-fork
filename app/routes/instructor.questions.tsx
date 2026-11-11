@@ -6,7 +6,6 @@ import type { Route } from "./+types/instructor.questions";
 import { requireInstructorOrAdmin, requireStaff } from "~/lib/access.server";
 import { renderComment } from "~/lib/comment-markdown.server";
 import { postComment } from "~/lib/comments.server";
-import { kickNotificationDrainer } from "~/lib/notifications/runtime.server";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -183,7 +182,6 @@ export async function action({ request }: Route.ActionArgs) {
     throw error;
   }
 
-  kickNotificationDrainer();
   return { ok: true };
 }
 

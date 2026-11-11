@@ -20,7 +20,6 @@ import {
   completeTeamPurchase,
   isUserEnrolled,
 } from "~/lib/purchases.server";
-import { kickNotificationDrainer } from "~/lib/notifications/runtime.server";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import {
@@ -249,8 +248,6 @@ export async function action({ params, request }: Route.ActionArgs) {
       if (result.status === 409) throw redirect(`/courses/${slug}`);
       throw data(result.error, { status: result.status });
     }
-    // The purchase has committed, so its Notifications can go out.
-    kickNotificationDrainer();
     throw redirect(`/courses/${slug}/welcome`);
   }
 
@@ -269,7 +266,6 @@ export async function action({ params, request }: Route.ActionArgs) {
   if (!result.ok) {
     throw data(result.error, { status: result.status });
   }
-  kickNotificationDrainer();
   throw redirect(`/team`);
 }
 

@@ -13,7 +13,6 @@ import {
   SEAT_ON_HOLD,
   SEAT_REFUNDED,
 } from "~/lib/coupons.server";
-import { kickNotificationDrainer } from "~/lib/notifications/runtime.server";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Ticket, AlertCircle, CheckCircle2, Globe } from "lucide-react";
@@ -136,7 +135,6 @@ export async function action({ params, request }: Route.ActionArgs) {
     return data({ error: result.error }, { status: 400 });
   }
 
-  kickNotificationDrainer();
   throw redirect(`/courses/${result.courseSlug}/welcome`);
 }
 
@@ -165,7 +163,10 @@ export default function Redeem({
 
   // Determine which state to show
   const canRedeem =
-    !alreadyRedeemed && !alreadyEnrolled && !countryMismatch && !unavailableReason;
+    !alreadyRedeemed &&
+    !alreadyEnrolled &&
+    !countryMismatch &&
+    !unavailableReason;
 
   return (
     <div className="mx-auto max-w-2xl p-6 lg:p-8">
