@@ -14,9 +14,10 @@ import { sendEmail } from "~/lib/mailer.server";
 import { formatPrice } from "~/lib/utils";
 
 // ─── Catalogue (one entry, for the prototype) ───
-// One catalogue Notification can map to TWO Knock workflows: the locked
-// Email is its own email-only workflow with "Override recipient
-// preferences" on; the In-app counterpart is a normal, mutable workflow.
+// One catalogue Notification = ONE Knock workflow with an Email step and an
+// In-app step. Email is sent by Knock (Postmark as its provider), not by
+// Cadence. `locked: true` means the workflow has "Override recipient
+// preferences" on, which locks BOTH steps (Knock overrides per workflow).
 
 type RefundRequestRaisedData = {
   learnerName: string;
@@ -28,8 +29,8 @@ type RefundRequestRaisedData = {
 export const catalogue = {
   "refund-request-raised": {
     label: "Refund Request raised",
-    lockedEmailWorkflow: "refund-request-raised-email",
-    inAppWorkflow: "refund-request-raised",
+    workflow: "refund-request-raised",
+    locked: true,
     title: (d: RefundRequestRaisedData) => `Refund requested — ${d.courseTitle}`,
     url: (d: RefundRequestRaisedData) => `/courses/${d.courseSlug}`,
     // Used by the local transport only. In Knock this text lives in the
@@ -95,16 +96,10 @@ function knockService(apiKey: string, feedChannelId: string): NotificationServic
         title: entry.title(data),
         url: entry.url(data),
       };
-      await Promise.all([
-        client.workflows.trigger(entry.lockedEmailWorkflow, {
-          recipients,
-          data: triggerData,
-        }),
-        client.workflows.trigger(entry.inAppWorkflow, {
-          recipients,
-          data: triggerData,
-        }),
-      ]);
+      await client.workflows.trigger(entry.workflow, {
+        recipients,
+        data: triggerData,
+      });
     },
     async listFeed(userId) {
       // FINDING: client.users.feeds.listItems() returns an EntriesCursor that
@@ -162,7 +157,8 @@ function localService(): NotificationService {
     kind: "local",
     async notify(type, recipient, data) {
       const entry = catalogue[type];
-      // Locked Email: always sent, no preference check.
+      // Mirrors the Knock workflow: Email step, then In-app step. Locked, so
+      // no preference check.
       await sendEmail({
         to: recipient.email,
         subject: entry.title(data),
@@ -172,7 +168,7 @@ function localService(): NotificationService {
       rows.unshift({
         id: `local-${Date.now()}`,
         userId: recipient.id,
-        type: entry.inAppWorkflow,
+        type: entry.workflow,
         title: entry.title(data),
         body: entry.localInAppBody(data),
         url: entry.url(data),
