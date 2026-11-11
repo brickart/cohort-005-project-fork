@@ -15,7 +15,7 @@ import {
   users,
 } from "~/db/schema";
 import { db } from "~/db";
-import { changeCourseStatus } from "~/lib/courses.server";
+import { changeCourseStatusForAction } from "~/lib/courses.server";
 import { eq, or, sql } from "drizzle-orm";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -134,16 +134,12 @@ export async function action({ request }: Route.ActionArgs) {
   const { intent } = parsed.data;
 
   if (intent === "update-status") {
-    const result = changeCourseStatus(
+    changeCourseStatusForAction(
       db,
       parsed.data.courseId,
       parsed.data.status,
-      currentUserId,
-      new Date()
+      currentUserId
     );
-    if (!result.ok) {
-      throw data(result.error, { status: result.status });
-    }
     return { success: true };
   }
 
