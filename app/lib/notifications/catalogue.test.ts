@@ -38,6 +38,38 @@ const FIXTURES: { [K in keyof NotificationDataMap]: NotificationDataMap[K] } = {
     reason: "It was not what I expected.",
     refunds_url: "https://cadence.test/admin/refunds",
   },
+  "lesson-question": {
+    recipient: { email: "ines@example.com", name: "Ines" },
+    actor_name: "Liam",
+    title: "New question on Ownership",
+    action_url: "/courses/intro-to-rust/lessons/7",
+    preferences_url: "https://cadence.test/settings",
+    course_title: "Intro to Rust",
+    lesson_title: "Ownership",
+    comment_excerpt: "Why does <b>this</b> move?",
+    lesson_url: "https://cadence.test/courses/intro-to-rust/lessons/7",
+  },
+  "comment-reply": {
+    recipient: { email: "liam@example.com", name: "Liam" },
+    actor_name: "Ines",
+    title: "Ines replied to your comment on Ownership",
+    action_url: "/courses/intro-to-rust/lessons/7",
+    preferences_url: "https://cadence.test/settings",
+    course_title: "Intro to Rust",
+    lesson_title: "Ownership",
+    comment_excerpt: "Because the value is moved.",
+    lesson_url: "https://cadence.test/courses/intro-to-rust/lessons/7",
+  },
+  "course-status-changed": {
+    recipient: { email: "ines@example.com", name: "Ines" },
+    actor_name: "Pat",
+    title: "Intro to Rust was archived",
+    action_url: "/instructor/7",
+    preferences_url: "https://cadence.test/settings",
+    course_title: "Intro to Rust",
+    status: "archived",
+    course_url: "https://cadence.test/instructor/7",
+  },
 };
 
 const HTML_TAG = /<\/?[a-z][^>]*>/i;

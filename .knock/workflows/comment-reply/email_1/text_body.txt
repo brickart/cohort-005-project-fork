@@ -1,0 +1,7 @@
+Hi {{ recipient.name }},
+
+{{ data.actor_name }} replied to your comment on "{{ data.lesson_title }}" in "{{ data.course_title }}":
+
+{{ data.comment_excerpt | strip_html }}
+
+Read the reply: {{ data.lesson_url }}
