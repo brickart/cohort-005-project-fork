@@ -81,7 +81,7 @@ It needs to be public: GitHub Actions minutes are free on public repos, and the 
 
 You don't need these yet, but you'll be asked for them along the way. Both have a free option:
 
-- **[Knock](https://knock.app/)**, a free Developer account, when you build notifications. Its keys go in `.env`, which is gitignored.
+- **[Knock](https://knock.app/)**, a free Developer account, when you build notifications. Its keys go in `.env`, which is gitignored. See [docs/notifications-knock.md](docs/notifications-knock.md), which also lists the launch prerequisites still to do.
 - **[tldraw](https://www.tldraw.com/)**, for whiteboarding your tasks. Any drawing app will do.
 
 ## Scripts
@@ -89,6 +89,8 @@ You don't need these yet, but you'll be asked for them along the way. Both have 
 | Command                      | Description                                  |
 | ---------------------------- | -------------------------------------------- |
 | `npm run dev`                | Start the development server                 |
+| `npm run dev:knock`          | Dev server against Knock, loading `.env`     |
+| `npm run knock:push`         | Push and commit `.knock/` to Knock (dev env) |
 | `npm run build`              | Build for production                         |
 | `npm run test`               | Run tests with Vitest                        |
 | `npm run test:watch`         | Run tests in watch mode                      |

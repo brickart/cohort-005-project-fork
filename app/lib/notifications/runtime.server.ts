@@ -1,4 +1,5 @@
 import { db } from "~/db";
+import { createKnockNotificationService } from "./knock-service.server";
 import { createLocalNotificationService } from "./local-service.server";
 import { deliverPending } from "./outbox.server";
 import type { NotificationService } from "./service.server";
@@ -12,23 +13,49 @@ const SWEEP_INTERVAL_MS = 60_000;
 
 let service: NotificationService | undefined;
 
+export type NotificationServiceChoice =
+  { kind: "local" } | { kind: "knock"; apiKey: string; feedChannelId: string };
+
+type Env = Record<string, string | undefined>;
+
 /**
- * The local service whenever KNOCK_API_SECRET_KEY is absent, and always under
- * vitest. Dev keeps the feed in .notifications/store.json and Emails in
- * .outbox/; tests keep everything in memory.
+ * Knock whenever KNOCK_API_SECRET_KEY is set (npm run dev:knock loads it from
+ * .env), the local service otherwise, and always the local one under vitest.
+ */
+export function notificationServiceChoice(env: Env): NotificationServiceChoice {
+  if (env.VITEST) return { kind: "local" };
+  const apiKey = env.KNOCK_API_SECRET_KEY;
+  if (!apiKey) return { kind: "local" };
+  const feedChannelId = env.KNOCK_FEED_CHANNEL_ID;
+  if (!feedChannelId) {
+    throw new Error(
+      "KNOCK_API_SECRET_KEY is set but KNOCK_FEED_CHANNEL_ID is not. Set both in .env to use Knock, or neither to stay local."
+    );
+  }
+  return { kind: "knock", apiKey, feedChannelId };
+}
+
+/**
+ * The service the app runs on. Dev without credentials keeps the feed in
+ * .notifications/store.json and Emails in .outbox/; tests keep everything in
+ * memory.
  */
 export function getNotificationService(): NotificationService {
   if (service) return service;
 
-  if (process.env.VITEST) {
+  const choice = notificationServiceChoice(process.env);
+  if (choice.kind === "knock") {
+    service = createKnockNotificationService({
+      apiKey: choice.apiKey,
+      feedChannelId: choice.feedChannelId,
+      // Well inside the drainer's 2 minute lease, and short enough that a
+      // slow Knock doesn't hold up a page that reads the feed for long.
+      timeout: 15_000,
+      maxRetries: 1,
+    });
+  } else if (process.env.VITEST) {
     service = createLocalNotificationService();
   } else {
-    if (process.env.KNOCK_API_SECRET_KEY) {
-      // The Knock implementation arrives in a later ticket.
-      console.warn(
-        "[notifications] KNOCK_API_SECRET_KEY is set, but Cadence has no Knock NotificationService yet. Using the local one."
-      );
-    }
     service = createLocalNotificationService({
       storePath: ".notifications/store.json",
       outboxDir: ".outbox",
