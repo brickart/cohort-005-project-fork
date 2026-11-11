@@ -1,0 +1,9 @@
+CADENCE
+
+{{ content }}
+
+— The Cadence team
+
+---
+You're getting this because of your Notification Preferences.
+Manage them in Settings: {{ data.preferences_url }}

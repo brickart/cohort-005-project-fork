@@ -31,6 +31,7 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "isbot": "^5.1.31",
+    "liquidjs": "^10.30.1",
     "lucide-react": "^0.563.0",
     "marked": "^17.0.1",
     "monaco-editor": "^0.56.0",

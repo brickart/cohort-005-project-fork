@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { createTestDb, seedBaseData } from "~/test/setup";
 import * as schema from "~/db/schema";
@@ -234,6 +234,130 @@ describe("raising a Refund Request", () => {
       ok: false,
       status: 403,
     });
+  });
+});
+
+function outboxRows() {
+  return db
+    .select()
+    .from(schema.notificationOutbox)
+    .all()
+    .map((row) => ({ ...row, data: JSON.parse(row.data) }));
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+describe("the Notifications a Refund Request causes", () => {
+  beforeEach(() => {
+    vi.stubEnv("APP_URL", "https://cadence.test");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("confirms to the buyer that it was received", () => {
+    const purchase = buyForSelf(base.user.id);
+
+    raise(purchase.id, base.user.id);
+
+    const confirmation = outboxRows().filter(
+      (row) => row.type === "refund-request-raised"
+    );
+    expect(confirmation).toHaveLength(1);
+    expect(confirmation[0]).toMatchObject({
+      recipientId: base.user.id,
+      actorId: base.user.id,
+      status: "pending",
+      data: {
+        recipient: { email: "test@example.com", name: "Test User" },
+        actor_name: "Test User",
+        course_title: "Test Course",
+        amount: "$79.00",
+        action_url: "/settings",
+        refund_url: "https://cadence.test/settings",
+      },
+    });
+    expect(confirmation[0].idempotencyKey).toMatch(UUID);
+  });
+
+  it("sends a Team Admin's confirmation to the team page", () => {
+    const teamAdmin = addLearner("Priya");
+    const { purchase } = buySeats(teamAdmin.id, 2);
+
+    raise(purchase.id, teamAdmin.id);
+
+    const [confirmation] = outboxRows().filter(
+      (row) => row.type === "refund-request-raised"
+    );
+    expect(confirmation.data).toMatchObject({
+      action_url: "/team",
+      refund_url: "https://cadence.test/team",
+    });
+  });
+
+  it("tells every Admin there is a Refund Request to decide", () => {
+    const secondAdmin = db
+      .insert(schema.users)
+      .values({ name: "Sam Admin", email: "sam@example.com", role: UserRole.Admin })
+      .returning()
+      .get();
+    const purchase = buyForSelf(base.user.id);
+
+    raise(purchase.id, base.user.id);
+
+    const toDecide = outboxRows().filter(
+      (row) => row.type === "refund-request-to-decide"
+    );
+    expect(toDecide.map((row) => row.recipientId).sort()).toEqual(
+      [platformAdmin.id, secondAdmin.id].sort()
+    );
+    expect(toDecide[0]).toMatchObject({
+      status: "pending",
+      actorId: base.user.id,
+      data: {
+        recipient: { email: "pat@example.com", name: "Pat Admin" },
+        actor_name: "Test User",
+        course_title: "Test Course",
+        amount: "$79.00",
+        reason: "It was not what I expected.",
+        action_url: "/admin/refunds",
+        refunds_url: "https://cadence.test/admin/refunds",
+      },
+    });
+    const keys = outboxRows().map((row) => row.idempotencyKey);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("does not tell an Admin about their own Refund Request", () => {
+    const purchase = buyForSelf(platformAdmin.id);
+
+    raise(purchase.id, platformAdmin.id);
+
+    expect(
+      outboxRows().filter((row) => row.type === "refund-request-to-decide")
+    ).toEqual([]);
+  });
+
+  it("writes nothing when the Refund Request is rolled back", () => {
+    const purchase = buyForSelf(base.user.id);
+
+    expect(() =>
+      db.transaction((tx) => {
+        raiseRefundRequest(tx, purchase.id, base.user.id, "Changed my mind.", NOW);
+        throw new Error("rolled back");
+      })
+    ).toThrow("rolled back");
+
+    expect(outboxRows()).toEqual([]);
+  });
+
+  it("writes nothing when the Refund Request is refused", () => {
+    const purchase = buyForSelf(base.user.id, 30);
+
+    raiseRefundRequest(db, purchase.id, base.user.id, "Too late.", NOW);
+
+    expect(outboxRows()).toEqual([]);
   });
 });
 

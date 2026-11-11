@@ -7,6 +7,7 @@ import { courses, purchases } from "~/db/schema";
 import { eq } from "drizzle-orm";
 import { parseFormData, parseParams } from "~/lib/validation";
 import { raiseRefundRequest } from "~/lib/refunds.server";
+import { kickNotificationDrainer } from "~/lib/notifications/runtime.server";
 
 const refundParamsSchema = z.object({
   slug: z.string().min(1),
@@ -71,9 +72,8 @@ export async function action({ params, request }: Route.ActionArgs) {
     throw data(result.error, { status: result.status });
   }
 
-  console.log(
-    `[email] to=${result.email.to} subject=${result.email.subject}\n${result.email.body}`
-  );
+  // The Refund Request has committed, so its Notifications can go out.
+  kickNotificationDrainer();
 
   return redirect(result.kind === "team_licence" ? "/team" : "/settings");
 }
