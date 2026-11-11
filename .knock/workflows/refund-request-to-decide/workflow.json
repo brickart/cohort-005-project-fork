@@ -1,0 +1,31 @@
+{
+  "name": "Refund Request to decide",
+  "description": "Tells every Admin that a Learner raised a Refund Request.",
+  "settings": {
+    "override_recipient_preferences": false
+  },
+  "steps": [
+    {
+      "ref": "email_1",
+      "type": "channel",
+      "channel_key": "email",
+      "template": {
+        "settings": {
+          "layout_key": "default"
+        },
+        "subject": "{{ data.title }}",
+        "html_body@": "email_1/html_body.html",
+        "text_body@": "email_1/text_body.txt"
+      }
+    },
+    {
+      "ref": "in_app_feed_1",
+      "type": "channel",
+      "channel_key": "in-app-feed",
+      "template": {
+        "action_url": "{{ data.action_url }}",
+        "markdown_body@": "in_app_feed_1/markdown_body.md"
+      }
+    }
+  ]
+}
