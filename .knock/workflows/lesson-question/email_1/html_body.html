@@ -1,0 +1,5 @@
+<p>Hi {{ recipient.name | escape }},</p>
+<p>{{ data.actor_name | escape }} asked a new question on <strong>{{ data.lesson_title | escape }}</strong> in {{ data.course_title | escape }}:</p>
+<blockquote style="margin: 0 0 16px; padding: 0 0 0 12px; border-left: 3px solid #e4e4e7; color: #52525b;">{{ data.comment_excerpt | escape | newline_to_br }}</blockquote>
+<p>Answer it on the lesson page so everyone taking the course can see your reply.</p>
+{% partial "button", url: data.lesson_url, label: "Answer the question" %}

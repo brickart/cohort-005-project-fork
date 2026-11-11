@@ -72,6 +72,16 @@ export type RefundRequestDeclinedData = BaseNotificationData & {
   refund_url: string;
 };
 
+/** What lesson-question and comment-reply carry. */
+export type LessonCommentData = BaseNotificationData & {
+  course_title: string;
+  lesson_title: string;
+  /** The start of the comment, as the commenter wrote it (untrusted). */
+  comment_excerpt: string;
+  /** Absolute link to the lesson the comment is on. */
+  lesson_url: string;
+};
+
 export type CourseStatusChangedData = BaseNotificationData & {
   course_title: string;
   /** The course's new status: "published" or "archived". */
@@ -85,6 +95,8 @@ export type NotificationDataMap = {
   "refund-request-to-decide": RefundRequestToDecideData;
   "refund-request-approved": RefundRequestApprovedData;
   "refund-request-declined": RefundRequestDeclinedData;
+  "lesson-question": LessonCommentData;
+  "comment-reply": LessonCommentData;
   "course-status-changed": CourseStatusChangedData;
 };
 
@@ -134,6 +146,20 @@ export const NOTIFICATIONS = {
     channels: ["email", "in_app_feed"],
     recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
     icon: "circle-x",
+  },
+  "lesson-question": {
+    label: "New question on your lesson",
+    locked: false,
+    channels: ["email", "in_app_feed"],
+    recipientRoles: [UserRole.Instructor],
+    icon: "message-circle-question",
+  },
+  "comment-reply": {
+    label: "Reply to your comment",
+    locked: false,
+    channels: ["email", "in_app_feed"],
+    recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
+    icon: "message-square-reply",
   },
   "course-status-changed": {
     label: "Course status changed",
