@@ -15,8 +15,11 @@ import {
   videoWatchEvents,
   LessonProgressStatus,
   RefundStatus,
+  UserRole,
 } from "~/db/schema";
 import { formatPrice } from "~/lib/utils";
+import { appUrl } from "~/lib/app-url.server";
+import { enqueueNotifications } from "~/lib/notifications/outbox.server";
 import {
   REFUND_COMPLETION_LIMIT,
   REFUND_WATCH_LIMIT_SECONDS,
@@ -351,61 +354,98 @@ export function getRefundOffer(
 export type Email = { to: string; subject: string; body: string };
 
 export type RaiseResult =
-  | { ok: true; refundRequestId: number; kind: PurchaseKind; email: Email }
+  | { ok: true; refundRequestId: number; kind: PurchaseKind }
   | Failure;
 
+/**
+ * Raises a Refund Request and enqueues its Notifications in the same
+ * transaction: a confirmation to the buyer and a Refund Request to decide for
+ * every Admin. Pass the caller's transaction to make it part of a bigger
+ * change. Callers kick the drainer after commit.
+ */
 export function raiseRefundRequest(
-  db: Db,
+  db: Queryable,
   purchaseId: number,
   buyerId: number,
   reason: string,
   now: Date
 ): RaiseResult {
-  const check = checkRefundRequest(db, purchaseId, buyerId, now);
-  if (!check.ok) return check;
+  return db.transaction((tx): RaiseResult => {
+    const check = checkRefundRequest(tx, purchaseId, buyerId, now);
+    if (!check.ok) return check;
 
-  const { purchase } = check;
-  const buyer = db.select().from(users).where(eq(users.id, buyerId)).get();
-  const course = db
-    .select()
-    .from(courses)
-    .where(eq(courses.id, purchase.courseId))
-    .get();
+    const { purchase } = check;
+    const buyer = tx.select().from(users).where(eq(users.id, buyerId)).get();
+    const course = tx
+      .select()
+      .from(courses)
+      .where(eq(courses.id, purchase.courseId))
+      .get();
 
-  if (!buyer || !course) {
-    return { ok: false, status: 404, error: "Purchase not found." };
-  }
+    if (!buyer || !course) {
+      return { ok: false, status: 404, error: "Purchase not found." };
+    }
 
-  const refundRequest = db
-    .insert(refunds)
-    .values({
-      purchaseId: purchase.id,
-      status: RefundStatus.Open,
-      reason,
-      requestedAt: now.toISOString(),
-    })
-    .returning()
-    .get();
+    const refundRequest = tx
+      .insert(refunds)
+      .values({
+        purchaseId: purchase.id,
+        status: RefundStatus.Open,
+        reason,
+        requestedAt: now.toISOString(),
+      })
+      .returning()
+      .get();
 
-  return {
-    ok: true,
-    refundRequestId: refundRequest.id,
-    kind: kindOf(getSeats(db, purchase.id)),
-    email: {
-      to: buyer.email,
-      subject: `Refund requested — ${course.title}`,
-      body: [
-        `Hi ${buyer.name},`,
-        "",
-        `We have your refund request for "${course.title}".`,
-        `The refund is for ${formatPrice(purchase.amountPaid)}, the amount you paid.`,
-        "",
-        "Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.",
-        "",
-        "— The Cadence team",
-      ].join("\n"),
-    },
-  };
+    const kind = kindOf(getSeats(tx, purchase.id));
+    const followUpPath = kind === "team_licence" ? "/team" : "/settings";
+    const amount = formatPrice(purchase.amountPaid);
+    const admins = tx
+      .select()
+      .from(users)
+      .where(eq(users.role, UserRole.Admin))
+      .all();
+
+    enqueueNotifications(
+      tx,
+      [
+        {
+          type: "refund-request-raised",
+          recipientId: buyer.id,
+          data: {
+            recipient: { email: buyer.email, name: buyer.name },
+            actor_name: buyer.name,
+            title: `Refund requested — ${course.title}`,
+            action_url: followUpPath,
+            preferences_url: appUrl("/settings"),
+            course_title: course.title,
+            amount,
+            refund_url: appUrl(followUpPath),
+          },
+        },
+        ...admins.map((admin) => ({
+          type: "refund-request-to-decide" as const,
+          recipientId: admin.id,
+          data: {
+            recipient: { email: admin.email, name: admin.name },
+            actor_name: buyer.name,
+            title: `Refund request to decide — ${course.title}`,
+            action_url: "/admin/refunds",
+            preferences_url: appUrl("/settings"),
+            course_title: course.title,
+            amount,
+            buyer_name: buyer.name,
+            reason,
+            refunds_url: appUrl("/admin/refunds"),
+          },
+        })),
+      ],
+      buyer.id,
+      now
+    );
+
+    return { ok: true, refundRequestId: refundRequest.id, kind };
+  });
 }
 
 // ─── Listing Refund Requests ───

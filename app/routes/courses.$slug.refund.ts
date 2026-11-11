@@ -71,9 +71,5 @@ export async function action({ params, request }: Route.ActionArgs) {
     throw data(result.error, { status: result.status });
   }
 
-  console.log(
-    `[email] to=${result.email.to} subject=${result.email.subject}\n${result.email.body}`
-  );
-
   return redirect(result.kind === "team_licence" ? "/team" : "/settings");
 }
