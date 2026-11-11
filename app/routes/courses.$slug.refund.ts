@@ -16,8 +16,8 @@ import {
 } from "~/db/schema";
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { parseFormData, parseParams } from "~/lib/validation";
-import { formatPrice } from "~/lib/utils";
-import { sendEmail } from "~/lib/mailer.server";
+// PROTOTYPE (knock-end-to-end): Email now goes through the Notification seam.
+import { notificationService } from "~/lib/notifications.prototype.server";
 
 const REFUND_WINDOW_DAYS = 14;
 const MAX_WATCHED_HOURS = 2;
@@ -83,32 +83,6 @@ function lastDayOfWindow(purchasedAtIso: string): string {
   const deadline = new Date(purchasedAtIso);
   deadline.setDate(deadline.getDate() + REFUND_WINDOW_DAYS);
   return calendarDay(deadline);
-}
-
-/**
- * The confirmation the learner gets in their inbox. There is no mail
- * transport wired up yet, so the built message goes to the server log.
- */
-function buildRefundRequestEmail(input: {
-  learnerName: string;
-  learnerEmail: string;
-  courseTitle: string;
-  amount: number;
-}) {
-  return {
-    to: input.learnerEmail,
-    subject: `Refund requested — ${input.courseTitle}`,
-    body: [
-      `Hi ${input.learnerName},`,
-      "",
-      `We have your refund request for "${input.courseTitle}".`,
-      `The refund is for ${formatPrice(input.amount)}, the amount you paid.`,
-      "",
-      "Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.",
-      "",
-      "— The Cadence team",
-    ].join("\n"),
-  };
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
@@ -217,14 +191,16 @@ export async function action({ params, request }: Route.ActionArgs) {
     .returning()
     .get();
 
-  const email = buildRefundRequestEmail({
-    learnerName: learner.name,
-    learnerEmail: learner.email,
-    courseTitle: course.title,
-    amount: purchase.amountPaid,
-  });
-
-  await sendEmail(email);
+  await notificationService().notify(
+    "refund-request-raised",
+    { id: learner.id, name: learner.name, email: learner.email },
+    {
+      learnerName: learner.name,
+      courseTitle: course.title,
+      courseSlug: course.slug,
+      amount: purchase.amountPaid,
+    }
+  );
 
   return redirect("/settings");
 }

@@ -46,6 +46,8 @@ export default [
     route("settings", "routes/settings.tsx"),
     route("team", "routes/team.tsx"),
     route("redeem/:code", "routes/redeem.$code.tsx"),
+    // PROTOTYPE (knock-end-to-end)
+    route("api/notifications-prototype", "routes/api.notifications-prototype.ts"),
   ]),
   route("signup", "routes/signup.tsx"),
   route("login", "routes/login.tsx"),

@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { cn } from "~/lib/utils";
 import { UserRole } from "~/db/schema";
 import { UserAvatar } from "~/components/user-avatar";
+// PROTOTYPE (knock-end-to-end)
+import { NotificationBellPrototype } from "~/components/notification-bell.prototype";
 import {
   BookOpen,
   ChartColumn,
@@ -110,7 +112,10 @@ export function Sidebar({
   currentUser,
   recentCourses = [],
   isTeamAdmin = false,
-}: SidebarProps) {
+  notificationFeed,
+}: SidebarProps & {
+  notificationFeed?: React.ComponentProps<typeof NotificationBellPrototype>["feed"];
+}) {
   const currentUserRole = currentUser?.role ?? null;
   const [isDark, setIsDark] = useState(false);
 
@@ -133,6 +138,7 @@ export function Sidebar({
         <NavLink to="/" className="text-lg font-bold tracking-tight">
           Cadence
         </NavLink>
+        {notificationFeed && <NotificationBellPrototype feed={notificationFeed} />}
       </div>
 
       <nav className="flex-1 space-y-1 p-3">

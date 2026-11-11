@@ -4,6 +4,8 @@ import { Sidebar } from "~/components/sidebar";
 import { DevUI } from "~/components/dev-ui";
 import { Toaster } from "sonner";
 import { getCurrentUserId, getDevCountry } from "~/lib/session";
+// PROTOTYPE (knock-end-to-end)
+import { notificationService } from "~/lib/notifications.prototype.server";
 import { getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
 import { eq, and, or, sql, desc } from "drizzle-orm";
 import { db } from "~/db";
@@ -198,7 +200,26 @@ export async function loader({ request }: Route.LoaderArgs) {
       })
     : [];
 
+  // PROTOTYPE (knock-end-to-end): read the feed server-side on every load.
+  const service = notificationService();
+  let notificationFeed: {
+    items: Awaited<ReturnType<typeof service.listFeed>>["items"];
+    unreadCount: number;
+    source: string;
+    error?: string;
+  } = { items: [], unreadCount: 0, source: service.kind };
+  if (currentUserId) {
+    const started = Date.now();
+    try {
+      notificationFeed = { ...(await service.listFeed(currentUserId)), source: service.kind };
+    } catch (e) {
+      notificationFeed.error = e instanceof Error ? e.message : String(e);
+    }
+    console.log(`[notifications-prototype] ${service.kind} listFeed ${Date.now() - started}ms`);
+  }
+
   return {
+    notificationFeed,
     users: users.map((u) => ({ id: u.id, name: u.name, role: u.role })),
     currentUser: currentUser
       ? {
@@ -225,6 +246,7 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
     countryTierInfo,
     countries,
     isTeamAdmin: userIsTeamAdmin,
+    notificationFeed,
   } = loaderData;
 
   return (
@@ -233,6 +255,7 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
         currentUser={currentUser}
         recentCourses={recentCourses}
         isTeamAdmin={userIsTeamAdmin}
+        notificationFeed={currentUser ? notificationFeed : undefined}
       />
       <main className="flex-1 overflow-y-auto">
         <Outlet />

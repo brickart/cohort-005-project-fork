@@ -33,3 +33,6 @@ reports/
 
 # Emails written locally instead of sent
 .outbox/
+
+# PROTOTYPE (knock-end-to-end) local feed store
+.notifications-prototype.json
