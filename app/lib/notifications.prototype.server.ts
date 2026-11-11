@@ -87,8 +87,12 @@ function knockService(apiKey: string, feedChannelId: string): NotificationServic
       const entry = catalogue[type];
       // Inline identify: Knock upserts the user with email + name, so the
       // Postmark step has an address. No separate identify call.
+      // PROTOTYPE: Knock's built-in email channel only delivers to members of
+      // the Knock account, so seeded .dev addresses are rejected. Redirect to
+      // KNOCK_PROTOTYPE_EMAIL_TO (set in .env) to prove the path.
+      const email = process.env.KNOCK_PROTOTYPE_EMAIL_TO || recipient.email;
       const recipients = [
-        { id: String(recipient.id), name: recipient.name, email: recipient.email },
+        { id: String(recipient.id), name: recipient.name, email },
       ];
       const triggerData = {
         ...data,
