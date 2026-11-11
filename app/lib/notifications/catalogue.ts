@@ -43,9 +43,21 @@ export type RefundRequestToDecideData = BaseNotificationData & {
   refunds_url: string;
 };
 
+/** What lesson-question and comment-reply carry. */
+export type LessonCommentData = BaseNotificationData & {
+  course_title: string;
+  lesson_title: string;
+  /** The start of the comment, as the commenter wrote it (untrusted). */
+  comment_excerpt: string;
+  /** Absolute link to the lesson the comment is on. */
+  lesson_url: string;
+};
+
 export type NotificationDataMap = {
   "refund-request-raised": RefundRequestRaisedData;
   "refund-request-to-decide": RefundRequestToDecideData;
+  "lesson-question": LessonCommentData;
+  "comment-reply": LessonCommentData;
 };
 
 export type NotificationKey = keyof NotificationDataMap;
@@ -80,6 +92,20 @@ export const NOTIFICATIONS = {
     channels: ["email", "in_app_feed"],
     recipientRoles: [UserRole.Admin],
     icon: "inbox",
+  },
+  "lesson-question": {
+    label: "New question on your lesson",
+    locked: false,
+    channels: ["email", "in_app_feed"],
+    recipientRoles: [UserRole.Instructor],
+    icon: "message-circle-question",
+  },
+  "comment-reply": {
+    label: "Reply to your comment",
+    locked: false,
+    channels: ["email", "in_app_feed"],
+    recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
+    icon: "message-square-reply",
   },
 } satisfies Record<NotificationKey, CatalogueEntry>;
 
