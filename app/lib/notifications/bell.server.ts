@@ -34,6 +34,42 @@ export async function readBell(
   };
 }
 
+/**
+ * How long a page waits for the feed. Knock's own timeout is longer, for the
+ * drainer; a page would rather show no bell than hang.
+ */
+const BELL_TIMEOUT_MS = 3_000;
+
+/**
+ * readBell for the app layout: if the NotificationService fails or is slow
+ * (Knock is down, say), logs it and returns null, so the page renders without
+ * a bell instead of failing or hanging.
+ */
+export async function readBellOrNothing(
+  service: NotificationService,
+  userId: number,
+  { timeoutMs = BELL_TIMEOUT_MS }: { timeoutMs?: number } = {}
+): Promise<Bell | null> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`The feed took longer than ${timeoutMs} ms`)),
+      timeoutMs
+    );
+  });
+  try {
+    return await Promise.race([readBell(service, userId), timeout]);
+  } catch (error) {
+    console.error(
+      "[notifications] Showing no bell; reading the feed failed:",
+      error
+    );
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const bellActionSchema = z.discriminatedUnion("intent", [
   z.object({ intent: z.literal("mark-read"), itemId: z.string().min(1) }),
   z.object({ intent: z.literal("mark-all-read") }),

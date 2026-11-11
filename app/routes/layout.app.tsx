@@ -7,7 +7,7 @@ import { getCurrentUserId, getDevCountry } from "~/lib/session";
 import { getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
 import { eq, and, or, sql, desc } from "drizzle-orm";
 import { db } from "~/db";
-import { readBell } from "~/lib/notifications/bell.server";
+import { readBellOrNothing } from "~/lib/notifications/bell.server";
 import { getNotificationService } from "~/lib/notifications/runtime.server";
 import {
   users,
@@ -205,8 +205,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     : [];
 
   // Re-read on every navigation, so the bell is current without a refresh.
+  // No bell (null) if the NotificationService is down or slow.
   const notifications = currentUser
-    ? await readBell(getNotificationService(), currentUser.id)
+    ? await readBellOrNothing(getNotificationService(), currentUser.id)
     : null;
 
   return {
