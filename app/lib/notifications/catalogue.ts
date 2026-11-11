@@ -72,11 +72,20 @@ export type RefundRequestDeclinedData = BaseNotificationData & {
   refund_url: string;
 };
 
+export type CourseStatusChangedData = BaseNotificationData & {
+  course_title: string;
+  /** The course's new status: "published" or "archived". */
+  status: "published" | "archived";
+  /** Absolute link to the course in the Instructor's editor. */
+  course_url: string;
+};
+
 export type NotificationDataMap = {
   "refund-request-raised": RefundRequestRaisedData;
   "refund-request-to-decide": RefundRequestToDecideData;
   "refund-request-approved": RefundRequestApprovedData;
   "refund-request-declined": RefundRequestDeclinedData;
+  "course-status-changed": CourseStatusChangedData;
 };
 
 export type NotificationKey = keyof NotificationDataMap;
@@ -125,6 +134,13 @@ export const NOTIFICATIONS = {
     channels: ["email", "in_app_feed"],
     recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
     icon: "circle-x",
+  },
+  "course-status-changed": {
+    label: "Course status changed",
+    locked: false,
+    channels: ["email", "in_app_feed"],
+    recipientRoles: [UserRole.Instructor],
+    icon: "book-open",
   },
 } satisfies Record<NotificationKey, CatalogueEntry>;
 

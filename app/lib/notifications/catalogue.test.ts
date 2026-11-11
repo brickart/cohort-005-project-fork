@@ -60,6 +60,16 @@ const FIXTURES: { [K in keyof NotificationDataMap]: NotificationDataMap[K] } = {
     reason: "You finished the course.",
     refund_url: "https://cadence.test/settings",
   },
+  "course-status-changed": {
+    recipient: { email: "ines@example.com", name: "Ines" },
+    actor_name: "Pat",
+    title: "Intro to Rust was archived",
+    action_url: "/instructor/7",
+    preferences_url: "https://cadence.test/settings",
+    course_title: "Intro to Rust",
+    status: "archived",
+    course_url: "https://cadence.test/instructor/7",
+  },
 };
 
 const HTML_TAG = /<\/?[a-z][^>]*>/i;
