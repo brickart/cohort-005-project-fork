@@ -5,6 +5,8 @@ import {
   MessageCircleQuestion,
   MessageSquareReply,
   Receipt,
+  ShoppingBag,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 
@@ -20,6 +22,8 @@ export const FEED_ICONS: Record<string, LucideIcon> = {
   "message-circle-question": MessageCircleQuestion,
   "message-square-reply": MessageSquareReply,
   receipt: Receipt,
+  "shopping-bag": ShoppingBag,
+  "user-plus": UserPlus,
 };
 
 export function feedIcon(name: string): LucideIcon {

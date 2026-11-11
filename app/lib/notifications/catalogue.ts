@@ -53,6 +53,27 @@ export type LessonCommentData = BaseNotificationData & {
   lesson_url: string;
 };
 
+export type PurchaseConfirmedData = BaseNotificationData & {
+  course_title: string;
+  /** The amount paid, already formatted, e.g. "$79.00". */
+  amount: string;
+  /** How many places were bought: 1 for an individual purchase. */
+  seats: number;
+  /** A team purchase is for a Team Manager, who is not enrolled themselves. */
+  is_team_purchase: boolean;
+  /** Absolute link to the course. */
+  course_url: string;
+  /** Absolute link to the Team Manager's team page. */
+  team_url: string;
+};
+
+export type NewEnrollmentData = BaseNotificationData & {
+  course_title: string;
+  learner_name: string;
+  /** Absolute link to the course's students page. */
+  students_url: string;
+};
+
 export type CourseStatusChangedData = BaseNotificationData & {
   course_title: string;
   /** The course's new status: "published" or "archived". */
@@ -66,6 +87,8 @@ export type NotificationDataMap = {
   "refund-request-to-decide": RefundRequestToDecideData;
   "lesson-question": LessonCommentData;
   "comment-reply": LessonCommentData;
+  "purchase-confirmed": PurchaseConfirmedData;
+  "new-enrollment": NewEnrollmentData;
   "course-status-changed": CourseStatusChangedData;
 };
 
@@ -87,7 +110,7 @@ export type CatalogueEntry = {
   icon: string;
 };
 
-export const NOTIFICATIONS = {
+export const NOTIFICATIONS: Record<NotificationKey, CatalogueEntry> = {
   "refund-request-raised": {
     label: "Refund Request received",
     locked: true,
@@ -116,6 +139,20 @@ export const NOTIFICATIONS = {
     recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
     icon: "message-square-reply",
   },
+  "purchase-confirmed": {
+    label: "Purchase receipt",
+    locked: true,
+    channels: ["email", "in_app_feed"],
+    recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
+    icon: "shopping-bag",
+  },
+  "new-enrollment": {
+    label: "New Enrollment on your course",
+    locked: false,
+    channels: ["in_app_feed"],
+    recipientRoles: [UserRole.Instructor],
+    icon: "user-plus",
+  },
   "course-status-changed": {
     label: "Course status changed",
     locked: false,
@@ -123,7 +160,7 @@ export const NOTIFICATIONS = {
     recipientRoles: [UserRole.Instructor],
     icon: "book-open",
   },
-} satisfies Record<NotificationKey, CatalogueEntry>;
+};
 
 export const NOTIFICATION_KEYS = Object.keys(
   NOTIFICATIONS

@@ -1,0 +1,18 @@
+{
+  "name": "New Enrollment",
+  "description": "Tells a course's Instructor that a Learner enrolled through an individual purchase. In-app only.",
+  "settings": {
+    "override_recipient_preferences": false
+  },
+  "steps": [
+    {
+      "ref": "in_app_feed_1",
+      "type": "channel",
+      "channel_key": "in-app-feed",
+      "template": {
+        "action_url": "{{ data.action_url }}",
+        "markdown_body@": "in_app_feed_1/markdown_body.md"
+      }
+    }
+  ]
+}
