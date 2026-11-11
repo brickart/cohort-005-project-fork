@@ -104,6 +104,18 @@ export type NewEnrollmentData = BaseNotificationData & {
   students_url: string;
 };
 
+export type CouponRedeemedData = BaseNotificationData & {
+  course_title: string;
+  /** The team member who redeemed the code. */
+  member_name: string;
+  /** How many of the Team Licence's Seats are now claimed, this one included. */
+  seats_claimed: number;
+  /** How many Seats the Team Licence has. */
+  seats_total: number;
+  /** Absolute link to the Team Manager's team page. */
+  team_url: string;
+};
+
 export type CourseStatusChangedData = BaseNotificationData & {
   course_title: string;
   /** The course's new status: "published" or "archived". */
@@ -121,6 +133,7 @@ export type NotificationDataMap = {
   "comment-reply": LessonCommentData;
   "purchase-confirmed": PurchaseConfirmedData;
   "new-enrollment": NewEnrollmentData;
+  "coupon-redeemed": CouponRedeemedData;
   "course-status-changed": CourseStatusChangedData;
 };
 
@@ -198,6 +211,14 @@ export const NOTIFICATIONS: Record<NotificationKey, CatalogueEntry> = {
     channels: ["in_app_feed"],
     recipientRoles: [UserRole.Instructor],
     icon: "user-plus",
+  },
+  "coupon-redeemed": {
+    label: "Coupon redeemed by a team member",
+    locked: false,
+    channels: ["email", "in_app_feed"],
+    // Team Manager is not a role: anyone who buys for a team becomes one.
+    recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
+    icon: "ticket",
   },
   "course-status-changed": {
     label: "Course status changed",
