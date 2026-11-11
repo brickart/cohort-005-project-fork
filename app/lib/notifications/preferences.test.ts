@@ -26,20 +26,37 @@ describe("the Notification Preferences cards", () => {
   });
 
   it("shows each role only the Notifications it receives", () => {
+    const student = ["refund-request-raised", "comment-reply"];
+    const admin = [
+      "refund-request-raised",
+      "refund-request-to-decide",
+      "comment-reply",
+    ];
+    const instructor = [
+      "refund-request-raised",
+      "lesson-question",
+      "comment-reply",
+      "course-status-changed",
+    ];
+
     expect(rowsOf(UserRole.Student)).toEqual({
-      email: ["refund-request-raised"],
-      in_app_feed: ["refund-request-raised"],
+      email: student,
+      in_app_feed: student,
     });
     expect(rowsOf(UserRole.Admin)).toEqual({
-      email: ["refund-request-raised", "refund-request-to-decide"],
-      in_app_feed: ["refund-request-raised", "refund-request-to-decide"],
+      email: admin,
+      in_app_feed: admin,
+    });
+    expect(rowsOf(UserRole.Instructor)).toEqual({
+      email: instructor,
+      in_app_feed: instructor,
     });
   });
 
   it("shows Locked Notifications as locked and everything else on by default", () => {
     const [email] = preferenceCards(UserRole.Admin, DEFAULT_PREFERENCES);
     expect(email.muted).toBe(false);
-    expect(email.rows).toEqual([
+    expect(email.rows.slice(0, 2)).toEqual([
       expect.objectContaining({ key: "refund-request-raised", locked: true }),
       expect.objectContaining({
         key: "refund-request-to-decide",

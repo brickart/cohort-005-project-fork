@@ -1,6 +1,7 @@
 {
   "name": "New question on a lesson",
   "description": "Tells a course's Instructor that a Learner asked a new question on one of its lessons.",
+  "categories": ["cadence"],
   "settings": {
     "override_recipient_preferences": false
   },
