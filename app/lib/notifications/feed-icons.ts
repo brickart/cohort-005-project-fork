@@ -1,6 +1,8 @@
 import {
   Bell,
   BookOpen,
+  CircleCheck,
+  CircleX,
   Inbox,
   Receipt,
   type LucideIcon,
@@ -14,6 +16,8 @@ import {
 export const FEED_ICONS: Record<string, LucideIcon> = {
   bell: Bell,
   "book-open": BookOpen,
+  "circle-check": CircleCheck,
+  "circle-x": CircleX,
   inbox: Inbox,
   receipt: Receipt,
 };
