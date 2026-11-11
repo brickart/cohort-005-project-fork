@@ -60,11 +60,13 @@ function isEnrolled(userId: number, courseId: number) {
 }
 
 function seat() {
-  return db
+  const coupon = db
     .select()
     .from(schema.coupons)
     .where(eq(schema.coupons.code, code))
-    .get()!;
+    .get();
+  if (!coupon) throw new Error(`No coupon with code ${code}`);
+  return coupon;
 }
 
 describe("redeeming a coupon", () => {
