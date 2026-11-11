@@ -13,7 +13,7 @@
         "settings": {
           "layout_key": "cadence-locked"
         },
-        "subject": "{{ data.title }}",
+        "subject": "We declined your refund request for {{ data.course_title }}",
         "html_body@": "email_1/html_body.html",
         "text_body@": "email_1/text_body.txt"
       }

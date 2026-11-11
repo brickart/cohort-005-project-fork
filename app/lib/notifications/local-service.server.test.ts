@@ -148,11 +148,11 @@ describe("the local NotificationService, writing to disk", () => {
     );
     expect(written).toMatchObject({
       to: "admin-7@example.com",
-      subject: "Refund request to decide — Intro to Rust",
+      subject: "Liam asked for a refund on Intro to Rust",
       layout: "default",
       workflow: "refund-request-to-decide",
     });
-    expect(written.text).toContain("Liam has asked for a refund");
+    expect(written.text).toContain("Liam asked for a refund");
     expect(readFileSync(join(outboxDir, html ?? ""), "utf8")).toContain(
       "Review refund requests"
     );

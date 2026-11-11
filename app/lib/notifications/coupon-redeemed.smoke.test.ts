@@ -79,7 +79,7 @@ describe("redeeming a coupon, end to end", () => {
     expect(emails).toHaveLength(1);
     expect(emails[0]).toMatchObject({
       to: "test@example.com",
-      subject: "Mia Member redeemed a coupon — Test Course",
+      subject: "Mia Member redeemed a coupon for Test Course",
       layout: "default",
     });
     expect(emails[0].text).toContain(

@@ -1,4 +1,4 @@
 <p>Hi {{ recipient.name | escape }},</p>
-<p>{{ data.actor_name | escape }} {{ data.status }} your course <strong>{{ data.course_title | escape }}</strong>.</p>
+<p>Your course <strong>{{ data.course_title | escape }}</strong> was {{ data.status }} by {{ data.actor_name | escape }}.</p>
 {% if data.status == "published" %}<p>It is now live in the catalogue, and Learners can find it and enroll.</p>{% else %}<p>It no longer appears in the catalogue, and new Learners can't enroll. Learners already enrolled keep their access.</p>{% endif %}
 {% partial "button", url: data.course_url, label: "Open the course" %}

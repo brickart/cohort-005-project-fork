@@ -14,7 +14,7 @@
         "settings": {
           "layout_key": "default"
         },
-        "subject": "{{ data.title }}",
+        "subject": "{{ data.actor_name }} replied to your comment on {{ data.lesson_title }}",
         "html_body@": "email_1/html_body.html",
         "text_body@": "email_1/text_body.txt"
       }

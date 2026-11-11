@@ -1,4 +1,4 @@
 <p>Hi {{ recipient.name | escape }},</p>
-<p>{{ data.member_name | escape }} redeemed one of your coupon codes for <strong>{{ data.course_title | escape }}</strong> and is now enrolled.</p>
+<p>{{ data.member_name | escape }} redeemed a coupon for <strong>{{ data.course_title | escape }}</strong>. It was one of your coupon codes, and they are now enrolled.</p>
 <p>{{ data.seats_claimed }} of {{ data.seats_total }} seats on this Team Licence are now claimed.</p>
 {% partial "button", url: data.team_url, label: "See your team" %}

@@ -68,7 +68,7 @@ describe("asking and answering a lesson question, end to end", () => {
       (email) => email.to === "instructor@example.com"
     );
     expect(toInstructor).toMatchObject({
-      subject: "New question on Ownership",
+      subject: "Test User asked a new question on Ownership in Test Course",
       layout: "default",
     });
     expect(toInstructor.html).toContain(

@@ -81,7 +81,7 @@ describe("raising a Refund Request, end to end", () => {
       (email) => email.to === "test@example.com"
     );
     expect(confirmation).toMatchObject({
-      subject: "Refund requested — Test Course",
+      subject: "We have your refund request for Test Course ($79.00)",
       layout: "cadence-locked",
     });
     expect(confirmation.html).toContain('href="https://cadence.test/settings"');
@@ -89,7 +89,7 @@ describe("raising a Refund Request, end to end", () => {
     expect(
       emails.find((email) => email.to === "pat@example.com")
     ).toMatchObject({
-      subject: "Refund request to decide — Test Course",
+      subject: "Test User asked for a refund on Test Course",
       layout: "default",
     });
 
