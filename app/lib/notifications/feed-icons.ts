@@ -1,6 +1,8 @@
 import {
   Bell,
   BookOpen,
+  CircleCheck,
+  CircleX,
   Inbox,
   MessageCircleQuestion,
   MessageSquareReply,
@@ -18,6 +20,8 @@ import {
 export const FEED_ICONS: Record<string, LucideIcon> = {
   bell: Bell,
   "book-open": BookOpen,
+  "circle-check": CircleCheck,
+  "circle-x": CircleX,
   inbox: Inbox,
   "message-circle-question": MessageCircleQuestion,
   "message-square-reply": MessageSquareReply,

@@ -43,6 +43,35 @@ export type RefundRequestToDecideData = BaseNotificationData & {
   refunds_url: string;
 };
 
+/**
+ * What an approved Refund Request ended:
+ * - `enrollment_ended`: the buyer's place on the course.
+ * - `enrollment_kept`: nothing, because the buyer also holds a Claimed Seat.
+ * - `seats_cancelled`: a Team Licence's Unclaimed Seats.
+ */
+export type RefundOutcome =
+  | "enrollment_ended"
+  | "enrollment_kept"
+  | "seats_cancelled";
+
+export type RefundRequestApprovedData = BaseNotificationData & {
+  course_title: string;
+  /** The amount refunded, already formatted. */
+  amount: string;
+  /** The Admin's optional note to the buyer. */
+  note: string | null;
+  outcome: RefundOutcome;
+  refund_url: string;
+};
+
+export type RefundRequestDeclinedData = BaseNotificationData & {
+  course_title: string;
+  amount: string;
+  /** Why the Admin declined it. Always given. */
+  reason: string;
+  refund_url: string;
+};
+
 /** What lesson-question and comment-reply carry. */
 export type LessonCommentData = BaseNotificationData & {
   course_title: string;
@@ -85,6 +114,8 @@ export type CourseStatusChangedData = BaseNotificationData & {
 export type NotificationDataMap = {
   "refund-request-raised": RefundRequestRaisedData;
   "refund-request-to-decide": RefundRequestToDecideData;
+  "refund-request-approved": RefundRequestApprovedData;
+  "refund-request-declined": RefundRequestDeclinedData;
   "lesson-question": LessonCommentData;
   "comment-reply": LessonCommentData;
   "purchase-confirmed": PurchaseConfirmedData;
@@ -124,6 +155,20 @@ export const NOTIFICATIONS: Record<NotificationKey, CatalogueEntry> = {
     channels: ["email", "in_app_feed"],
     recipientRoles: [UserRole.Admin],
     icon: "inbox",
+  },
+  "refund-request-approved": {
+    label: "Refund Request approved",
+    locked: true,
+    channels: ["email", "in_app_feed"],
+    recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
+    icon: "circle-check",
+  },
+  "refund-request-declined": {
+    label: "Refund Request declined",
+    locked: true,
+    channels: ["email", "in_app_feed"],
+    recipientRoles: [UserRole.Student, UserRole.Instructor, UserRole.Admin],
+    icon: "circle-x",
   },
   "lesson-question": {
     label: "New question on your lesson",
