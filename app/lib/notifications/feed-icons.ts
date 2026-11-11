@@ -1,4 +1,10 @@
-import { Bell, Inbox, Receipt, type LucideIcon } from "lucide-react";
+import {
+  Bell,
+  BookOpen,
+  Inbox,
+  Receipt,
+  type LucideIcon,
+} from "lucide-react";
 
 // ─── Feed icons ───
 // The catalogue names each Notification's icon as a string; this turns the
@@ -7,6 +13,7 @@ import { Bell, Inbox, Receipt, type LucideIcon } from "lucide-react";
 
 export const FEED_ICONS: Record<string, LucideIcon> = {
   bell: Bell,
+  "book-open": BookOpen,
   inbox: Inbox,
   receipt: Receipt,
 };
