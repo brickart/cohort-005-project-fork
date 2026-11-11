@@ -2,6 +2,8 @@ import {
   Bell,
   BookOpen,
   Inbox,
+  MessageCircleQuestion,
+  MessageSquareReply,
   Receipt,
   type LucideIcon,
 } from "lucide-react";
@@ -15,6 +17,8 @@ export const FEED_ICONS: Record<string, LucideIcon> = {
   bell: Bell,
   "book-open": BookOpen,
   inbox: Inbox,
+  "message-circle-question": MessageCircleQuestion,
+  "message-square-reply": MessageSquareReply,
   receipt: Receipt,
 };
 
