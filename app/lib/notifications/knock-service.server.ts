@@ -30,6 +30,8 @@ export type KnockNotificationServiceOptions = {
     input: string | URL | Request,
     init?: RequestInit
   ) => Promise<Response>;
+  /** Per request, in milliseconds. */
+  timeout?: number;
   maxRetries?: number;
 };
 
@@ -194,6 +196,7 @@ export function createKnockNotificationService(
     apiKey: options.apiKey,
     baseURL: options.baseURL,
     fetch: options.fetch,
+    timeout: options.timeout,
     maxRetries: options.maxRetries,
   });
 
