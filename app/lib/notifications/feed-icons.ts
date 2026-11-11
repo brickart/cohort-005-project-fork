@@ -4,6 +4,8 @@ import {
   CircleCheck,
   CircleX,
   Inbox,
+  MessageCircleQuestion,
+  MessageSquareReply,
   Receipt,
   type LucideIcon,
 } from "lucide-react";
@@ -19,6 +21,8 @@ export const FEED_ICONS: Record<string, LucideIcon> = {
   "circle-check": CircleCheck,
   "circle-x": CircleX,
   inbox: Inbox,
+  "message-circle-question": MessageCircleQuestion,
+  "message-square-reply": MessageSquareReply,
   receipt: Receipt,
 };
 
