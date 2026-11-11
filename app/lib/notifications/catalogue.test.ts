@@ -9,6 +9,7 @@ import {
   renderEmail,
   renderInApp,
 } from "./knock-templates.server";
+import { MUTE_CATEGORY } from "./preferences";
 
 // The catalogue and the Knock workflows in .knock/ must agree, or a
 // Notification ships with no workflow, or a Locked Notification without its
@@ -61,6 +62,12 @@ describe.each(NOTIFICATION_KEYS)("the %s workflow", (key) => {
 
   it("overrides recipient preferences exactly when it is locked", () => {
     expect(readWorkflow(key).overridesPreferences).toBe(entry.locked);
+  });
+
+  it("carries the shared Mute category exactly when it is not locked, so Mute everything silences it", () => {
+    expect(readWorkflow(key).categories.includes(MUTE_CATEGORY)).toBe(
+      !entry.locked
+    );
   });
 
   it.runIf(sendsEmail)(

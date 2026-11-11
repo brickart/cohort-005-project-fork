@@ -4,6 +4,8 @@
 // dev and tests (local-service.server.ts). Nothing outside this seam knows
 // which one is in use.
 
+import type { NotificationPreferences } from "./preferences";
+
 /** One outbox row, handed over for delivery. `data` is forwarded as-is. */
 export type OutboundNotification = {
   /** Sent as Knock's Idempotency-Key. */
@@ -39,6 +41,13 @@ export interface NotificationService {
   getFeed(userId: number): Promise<Feed>;
   markRead(userId: number, itemId: string): Promise<void>;
   markAllRead(userId: number): Promise<void>;
+  /** A person's Notification Preferences, including Mute. */
+  getPreferences(userId: number): Promise<NotificationPreferences>;
+  /** Replaces a person's Notification Preferences, including Mute. */
+  setPreferences(
+    userId: number,
+    preferences: NotificationPreferences
+  ): Promise<void>;
 }
 
 /**

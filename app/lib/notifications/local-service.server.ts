@@ -1,12 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { isNotificationKey, NOTIFICATIONS } from "./catalogue";
+import { isNotificationKey, NOTIFICATIONS, type Channel } from "./catalogue";
 import {
   DEFAULT_KNOCK_DIR,
+  readWorkflow,
   renderEmail,
   renderInApp,
 } from "./knock-templates.server";
+import {
+  DEFAULT_PREFERENCES,
+  fromKnockPreferenceSet,
+  knockWouldDeliver,
+  toKnockPreferenceSet,
+  type KnockPreferenceSet,
+} from "./preferences";
 import {
   NotificationDeliveryError,
   type Feed,
@@ -28,6 +36,8 @@ type Store = {
   items: StoredItem[];
   /** Idempotency keys already delivered, as Knock would remember them. */
   deliveredKeys: string[];
+  /** Each person's PreferenceSet, keyed by String(user id) as in Knock. */
+  preferences: Record<string, KnockPreferenceSet>;
 };
 
 export type LocalNotificationServiceOptions = {
@@ -40,7 +50,7 @@ export type LocalNotificationServiceOptions = {
 };
 
 function emptyStore(): Store {
-  return { items: [], deliveredKeys: [] };
+  return { items: [], deliveredKeys: [], preferences: {} };
 }
 
 export function createLocalNotificationService(
@@ -117,11 +127,19 @@ export function createLocalNotificationService(
 
       const at = clock();
       const { channels } = NOTIFICATIONS[type];
+      // Decided from the workflow in .knock/, the way Knock decides it.
+      const workflow = readWorkflow(type, knockDir);
+      const preferenceSet =
+        store.preferences[String(recipientId)] ??
+        toKnockPreferenceSet(DEFAULT_PREFERENCES);
+      const sendsOn = (channel: Channel) =>
+        channels.includes(channel) &&
+        knockWouldDeliver(preferenceSet, workflow, channel);
 
-      if (channels.includes("email")) writeEmail(type, data, at);
+      if (sendsOn("email")) writeEmail(type, data, at);
 
       const items = [...store.items];
-      if (channels.includes("in_app_feed")) {
+      if (sendsOn("in_app_feed")) {
         const inApp = renderInApp(type, data, knockDir);
         items.unshift({
           id: randomUUID(),
@@ -136,8 +154,25 @@ export function createLocalNotificationService(
       }
 
       save({
+        ...store,
         items,
         deliveredKeys: [...store.deliveredKeys, idempotencyKey],
+      });
+    },
+
+    async getPreferences(userId) {
+      const set = load().preferences[String(userId)];
+      return set ? fromKnockPreferenceSet(set) : DEFAULT_PREFERENCES;
+    },
+
+    async setPreferences(userId, preferences) {
+      const store = load();
+      save({
+        ...store,
+        preferences: {
+          ...store.preferences,
+          [String(userId)]: toKnockPreferenceSet(preferences),
+        },
       });
     },
 
