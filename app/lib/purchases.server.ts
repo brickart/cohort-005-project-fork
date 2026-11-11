@@ -87,6 +87,28 @@ function receipt(
   };
 }
 
+/** Tells the course's Instructor, In-app only, that a Learner enrolled. */
+export function newEnrollment(
+  instructor: User,
+  course: Course,
+  learner: User
+): NotificationIntent {
+  return {
+    type: "new-enrollment",
+    recipientId: instructor.id,
+    data: {
+      recipient: { email: instructor.email, name: instructor.name },
+      actor_name: learner.name,
+      title: `New Enrollment — ${course.title}`,
+      action_url: studentsPath(course.id),
+      preferences_url: appUrl("/settings"),
+      course_title: course.title,
+      learner_name: learner.name,
+      students_url: appUrl(studentsPath(course.id)),
+    },
+  };
+}
+
 export function isUserEnrolled(
   db: Queryable,
   userId: number,
@@ -143,24 +165,7 @@ export function completePurchase(
       tx,
       [
         receipt(buyer, course, amountPaid, 1, false),
-        ...(instructor
-          ? [
-              {
-                type: "new-enrollment" as const,
-                recipientId: instructor.id,
-                data: {
-                  recipient: { email: instructor.email, name: instructor.name },
-                  actor_name: buyer.name,
-                  title: `New Enrollment — ${course.title}`,
-                  action_url: studentsPath(course.id),
-                  preferences_url: appUrl("/settings"),
-                  course_title: course.title,
-                  learner_name: buyer.name,
-                  students_url: appUrl(studentsPath(course.id)),
-                },
-              },
-            ]
-          : []),
+        ...(instructor ? [newEnrollment(instructor, course, buyer)] : []),
       ],
       buyer.id,
       now

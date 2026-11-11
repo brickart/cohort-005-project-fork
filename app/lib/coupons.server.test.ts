@@ -122,6 +122,72 @@ describe("redeeming a coupon", () => {
   });
 });
 
+function outboxRows() {
+  return db
+    .select()
+    .from(schema.notificationOutbox)
+    .all()
+    .map((row) => ({ ...row, data: JSON.parse(row.data) }));
+}
+
+describe("the Notifications a redemption causes", () => {
+  it("tells the Team Manager, and the Instructor about the New Enrollment", () => {
+    redeemCoupon(db, code, teamMember.id, "US", NOW);
+
+    const rows = outboxRows();
+    expect(rows).toHaveLength(2);
+    const redeemed = rows.find((row) => row.type === "coupon-redeemed");
+    expect(redeemed).toMatchObject({
+      recipientId: base.user.id,
+      actorId: teamMember.id,
+      status: "pending",
+      data: {
+        recipient: { email: "test@example.com", name: "Test User" },
+        actor_name: "Mia Member",
+        title: "Mia Member redeemed a coupon — Test Course",
+        action_url: "/team",
+        preferences_url: "https://cadence.test/settings",
+        course_title: "Test Course",
+        member_name: "Mia Member",
+        seats_claimed: 1,
+        seats_total: 2,
+        team_url: "https://cadence.test/team",
+      },
+    });
+    const enrollment = rows.find((row) => row.type === "new-enrollment");
+    expect(enrollment).toMatchObject({
+      recipientId: base.instructor.id,
+      actorId: teamMember.id,
+      status: "pending",
+      data: {
+        recipient: { email: "instructor@example.com", name: "Test Instructor" },
+        actor_name: "Mia Member",
+        title: "New Enrollment — Test Course",
+        action_url: `/instructor/${base.course.id}/students`,
+        preferences_url: "https://cadence.test/settings",
+        course_title: "Test Course",
+        learner_name: "Mia Member",
+        students_url: `https://cadence.test/instructor/${base.course.id}/students`,
+      },
+    });
+    expect(redeemed?.idempotencyKey).not.toBe(enrollment?.idempotencyKey);
+  });
+
+  it("sends a Team Manager who redeems their own code no coupon-redeemed", () => {
+    redeemCoupon(db, code, base.user.id, "US", NOW);
+
+    expect(outboxRows().map((row) => [row.type, row.recipientId])).toEqual([
+      ["new-enrollment", base.instructor.id],
+    ]);
+  });
+
+  it("writes no Notification when the redemption is refused", () => {
+    redeemCoupon(db, code, teamMember.id, "DE", NOW);
+
+    expect(outboxRows()).toEqual([]);
+  });
+});
+
 function seedOtherUser(name: string, email: string) {
   return db
     .insert(schema.users)

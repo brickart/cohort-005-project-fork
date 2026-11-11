@@ -1,7 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "~/db/schema";
-import { coupons, courses, enrollments, purchases } from "~/db/schema";
+import { coupons, courses, enrollments, purchases, users } from "~/db/schema";
+import { appUrl } from "~/lib/app-url.server";
+import {
+  enqueueNotifications,
+  type NotificationIntent,
+} from "~/lib/notifications/outbox.server";
+import { newEnrollment } from "~/lib/purchases.server";
 import { getSeatAvailability } from "~/lib/refunds.server";
 
 // ─── Coupon redemption ───
@@ -29,6 +35,15 @@ export function getCouponByCode(db: Queryable, code: string) {
   return db.select().from(coupons).where(eq(coupons.code, code)).get();
 }
 
+function getUser(db: Queryable, userId: number) {
+  return db.select().from(users).where(eq(users.id, userId)).get();
+}
+
+/**
+ * The team member claims the Seat behind `code` and is enrolled. The Team
+ * Manager hears about it on Email and In-app (unless they redeemed their own
+ * code), and the course's Instructor gets an In-app New Enrollment.
+ */
 export function redeemCoupon(
   db: Queryable,
   code: string,
@@ -94,6 +109,40 @@ export function redeemCoupon(
       .values({ userId, courseId: coupon.courseId, enrolledAt: at })
       .returning()
       .get();
+
+    const member = getUser(tx, userId);
+    const instructor = getUser(tx, course.instructorId);
+    // The Team Manager is the person who bought the Team Licence.
+    const manager = purchase ? getUser(tx, purchase.userId) : undefined;
+    const intents: NotificationIntent[] = [];
+    if (member && manager && purchase) {
+      const seats = tx
+        .select({ redeemedAt: coupons.redeemedAt })
+        .from(coupons)
+        .where(eq(coupons.purchaseId, purchase.id))
+        .all();
+      intents.push({
+        type: "coupon-redeemed",
+        recipientId: manager.id,
+        data: {
+          recipient: { email: manager.email, name: manager.name },
+          actor_name: member.name,
+          title: `${member.name} redeemed a coupon — ${course.title}`,
+          action_url: "/team",
+          preferences_url: appUrl("/settings"),
+          course_title: course.title,
+          member_name: member.name,
+          seats_claimed: seats.filter((seat) => seat.redeemedAt !== null)
+            .length,
+          seats_total: seats.length,
+          team_url: appUrl("/team"),
+        },
+      });
+    }
+    if (member && instructor) {
+      intents.push(newEnrollment(instructor, course, member));
+    }
+    enqueueNotifications(tx, intents, userId, now);
 
     return {
       ok: true,
