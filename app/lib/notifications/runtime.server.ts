@@ -1,3 +1,4 @@
+import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
 import { db } from "~/db";
 import { createKnockNotificationService } from "./knock-service.server";
 import { createLocalNotificationService } from "./local-service.server";
@@ -22,8 +23,8 @@ export type NotificationServiceChoice =
 type Env = Record<string, string | undefined>;
 
 /**
- * Knock whenever KNOCK_API_SECRET_KEY is set (npm run dev:knock loads it from
- * .env), the local service otherwise, and always the local one, in memory,
+ * Knock whenever KNOCK_API_SECRET_KEY is set (both npm run dev and
+ * npm run dev:knock load it from .env), the local service otherwise, and always the local one, in memory,
  * under vitest. The one place that decides whether this is a test run.
  */
 export function notificationServiceChoice(env: Env): NotificationServiceChoice {
@@ -56,6 +57,11 @@ function createNotificationService(
 ): NotificationService {
   switch (choice.kind) {
     case "knock":
+      // Node waits 250 ms per address before trying the next; on networks
+      // where Knock's IPv6 addresses don't answer, a new connection took 5-7 s
+      // and the bell's 3 s timeout gave up. Set here, not as a CLI flag, so it
+      // holds however the server starts (`npm run dev` loads .env too).
+      setDefaultAutoSelectFamilyAttemptTimeout(500);
       return createKnockNotificationService({
         apiKey: choice.apiKey,
         feedChannelId: choice.feedChannelId,
