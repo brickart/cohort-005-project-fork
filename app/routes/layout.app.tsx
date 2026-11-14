@@ -7,6 +7,8 @@ import { getCurrentUserId, getDevCountry } from "~/lib/session";
 import { getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
 import { eq, and, or, sql, desc } from "drizzle-orm";
 import { db } from "~/db";
+import { readBellOrNothing } from "~/lib/notifications/bell.server";
+import { getNotificationService } from "~/lib/notifications/runtime.server";
 import {
   users,
   courses,
@@ -185,7 +187,11 @@ export async function loader({ request }: Route.LoaderArgs) {
           course.courseId
         );
         const totalLessons = getTotalLessonCount(course.courseId);
-        const progress = calculateProgress(currentUserId, course.courseId, false);
+        const progress = calculateProgress(
+          currentUserId,
+          course.courseId,
+          false
+        );
         return {
           courseId: course.courseId,
           title: course.courseTitle,
@@ -198,7 +204,14 @@ export async function loader({ request }: Route.LoaderArgs) {
       })
     : [];
 
+  // Re-read on every navigation, so the bell is current without a refresh.
+  // No bell (null) if the NotificationService is down or slow.
+  const notifications = currentUser
+    ? await readBellOrNothing(getNotificationService(), currentUser.id)
+    : null;
+
   return {
+    notifications,
     users: users.map((u) => ({ id: u.id, name: u.name, role: u.role })),
     currentUser: currentUser
       ? {
@@ -225,12 +238,14 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
     countryTierInfo,
     countries,
     isTeamAdmin: userIsTeamAdmin,
+    notifications,
   } = loaderData;
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         currentUser={currentUser}
+        notifications={notifications}
         recentCourses={recentCourses}
         isTeamAdmin={userIsTeamAdmin}
       />

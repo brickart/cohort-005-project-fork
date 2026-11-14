@@ -1,0 +1,9 @@
+Hi {{ recipient.name }},
+
+{{ data.actor_name }} asked a new question on "{{ data.lesson_title }}" in "{{ data.course_title }}":
+
+{{ data.comment_excerpt | strip_html }}
+
+Answer it on the lesson page so everyone taking the course can see your reply.
+
+Answer the question: {{ data.lesson_url }}

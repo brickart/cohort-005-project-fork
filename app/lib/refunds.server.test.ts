@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { createTestDb, seedBaseData } from "~/test/setup";
 import * as schema from "~/db/schema";
@@ -54,6 +54,10 @@ beforeEach(() => {
         .returning()
         .get().id
   );
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 function addLearner(name: string) {
@@ -237,6 +241,130 @@ describe("raising a Refund Request", () => {
   });
 });
 
+function outboxRows() {
+  return db
+    .select()
+    .from(schema.notificationOutbox)
+    .all()
+    .map((row) => ({ ...row, data: JSON.parse(row.data) }));
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+describe("the Notifications a Refund Request causes", () => {
+  beforeEach(() => {
+    vi.stubEnv("APP_URL", "https://cadence.test");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("confirms to the buyer that it was received", () => {
+    const purchase = buyForSelf(base.user.id);
+
+    raise(purchase.id, base.user.id);
+
+    const confirmation = outboxRows().filter(
+      (row) => row.type === "refund-request-raised"
+    );
+    expect(confirmation).toHaveLength(1);
+    expect(confirmation[0]).toMatchObject({
+      recipientId: base.user.id,
+      actorId: base.user.id,
+      status: "pending",
+      data: {
+        recipient: { email: "test@example.com", name: "Test User" },
+        actor_name: "Test User",
+        course_title: "Test Course",
+        amount: "$79.00",
+        action_url: "/settings",
+        refund_url: "https://cadence.test/settings",
+      },
+    });
+    expect(confirmation[0].idempotencyKey).toMatch(UUID);
+  });
+
+  it("sends a Team Admin's confirmation to the team page", () => {
+    const teamAdmin = addLearner("Priya");
+    const { purchase } = buySeats(teamAdmin.id, 2);
+
+    raise(purchase.id, teamAdmin.id);
+
+    const [confirmation] = outboxRows().filter(
+      (row) => row.type === "refund-request-raised"
+    );
+    expect(confirmation.data).toMatchObject({
+      action_url: "/team",
+      refund_url: "https://cadence.test/team",
+    });
+  });
+
+  it("tells every Admin there is a Refund Request to decide", () => {
+    const secondAdmin = db
+      .insert(schema.users)
+      .values({ name: "Sam Admin", email: "sam@example.com", role: UserRole.Admin })
+      .returning()
+      .get();
+    const purchase = buyForSelf(base.user.id);
+
+    raise(purchase.id, base.user.id);
+
+    const toDecide = outboxRows().filter(
+      (row) => row.type === "refund-request-to-decide"
+    );
+    expect(toDecide.map((row) => row.recipientId).sort()).toEqual(
+      [platformAdmin.id, secondAdmin.id].sort()
+    );
+    expect(toDecide[0]).toMatchObject({
+      status: "pending",
+      actorId: base.user.id,
+      data: {
+        recipient: { email: "pat@example.com", name: "Pat Admin" },
+        actor_name: "Test User",
+        course_title: "Test Course",
+        amount: "$79.00",
+        reason: "It was not what I expected.",
+        action_url: "/admin/refunds",
+        refunds_url: "https://cadence.test/admin/refunds",
+      },
+    });
+    const keys = outboxRows().map((row) => row.idempotencyKey);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("does not tell an Admin about their own Refund Request", () => {
+    const purchase = buyForSelf(platformAdmin.id);
+
+    raise(purchase.id, platformAdmin.id);
+
+    expect(
+      outboxRows().filter((row) => row.type === "refund-request-to-decide")
+    ).toEqual([]);
+  });
+
+  it("writes nothing when the Refund Request is rolled back", () => {
+    const purchase = buyForSelf(base.user.id);
+
+    expect(() =>
+      db.transaction((tx) => {
+        raiseRefundRequest(tx, purchase.id, base.user.id, "Changed my mind.", NOW);
+        throw new Error("rolled back");
+      })
+    ).toThrow("rolled back");
+
+    expect(outboxRows()).toEqual([]);
+  });
+
+  it("writes nothing when the Refund Request is refused", () => {
+    const purchase = buyForSelf(base.user.id, 30);
+
+    raiseRefundRequest(db, purchase.id, base.user.id, "Too late.", NOW);
+
+    expect(outboxRows()).toEqual([]);
+  });
+});
+
 describe("the refund offer on the course page", () => {
   it("offers the newest Individual Purchase, not a newer Team Licence", () => {
     const individual = buyForSelf(base.user.id, 3);
@@ -356,16 +484,87 @@ describe("approving a Refund Request", () => {
     });
   });
 
-  it("emails the buyer that the refund is on its way", () => {
+  it("notifies the buyer that the refund is on its way", () => {
+    vi.stubEnv("APP_URL", "https://cadence.test");
     const purchase = buyForSelf(base.user.id);
     const id = raise(purchase.id, base.user.id);
 
-    const result = approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+    approveRefundRequest(db, id, platformAdmin.id, "Sorry it missed the mark.", NOW);
 
-    if (!result.ok) throw new Error(result.error);
-    expect(result.email.to).toBe("test@example.com");
-    expect(result.email.subject).toBe("Refund approved — Test Course");
-    expect(result.email.body).toContain("$79.00");
+    const approved = outboxRows().filter(
+      (row) => row.type === "refund-request-approved"
+    );
+    expect(approved).toHaveLength(1);
+    expect(approved[0]).toMatchObject({
+      recipientId: base.user.id,
+      actorId: platformAdmin.id,
+      status: "pending",
+      data: {
+        recipient: { email: "test@example.com", name: "Test User" },
+        actor_name: "Pat Admin",
+        title: "Refund approved — Test Course",
+        action_url: "/settings",
+        course_title: "Test Course",
+        amount: "$79.00",
+        note: "Sorry it missed the mark.",
+        outcome: "enrollment_ended",
+        refund_url: "https://cadence.test/settings",
+      },
+    });
+    expect(approved[0].idempotencyKey).toMatch(UUID);
+  });
+
+  it("tells the buyer when they keep their place through a Claimed Seat", () => {
+    const priya = addLearner("Priya");
+    const { seats } = buySeats(priya.id, 2);
+    claimSeat(seats[0].id, base.user.id);
+    const purchase = db
+      .insert(schema.purchases)
+      .values({
+        userId: base.user.id,
+        courseId: base.course.id,
+        amountPaid: 7900,
+        createdAt: daysBefore(2),
+      })
+      .returning()
+      .get();
+    const id = raise(purchase.id, base.user.id);
+
+    approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+
+    const [approved] = outboxRows().filter(
+      (row) => row.type === "refund-request-approved"
+    );
+    expect(approved.data).toMatchObject({ outcome: "enrollment_kept", note: null });
+  });
+
+  it("tells a Team Admin their Unclaimed Seats were cancelled", () => {
+    const priya = addLearner("Priya");
+    const { purchase } = buySeats(priya.id, 2);
+    const id = raise(purchase.id, priya.id);
+
+    approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+
+    const [approved] = outboxRows().filter(
+      (row) => row.type === "refund-request-approved"
+    );
+    expect(approved).toMatchObject({
+      recipientId: priya.id,
+      data: { outcome: "seats_cancelled", action_url: "/team", amount: "$158.00" },
+    });
+  });
+
+  it("notifies no one when the approval is refused", () => {
+    const priya = addLearner("Priya");
+    const { purchase, seats } = buySeats(priya.id, 2);
+    const id = raise(purchase.id, priya.id);
+    claimSeat(seats[0].id, addLearner("Ben").id);
+
+    approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+
+    expect(
+      outboxRows().filter((row) => row.type === "refund-request-approved")
+    ).toEqual([]);
   });
 });
 
@@ -392,8 +591,7 @@ describe("declining a Refund Request", () => {
       NOW
     );
 
-    if (!result.ok) throw new Error(result.error);
-    expect(result.email.body).toContain("You finished the course.");
+    expect(result.ok).toBe(true);
     expect(isEnrolled(base.user.id)).toBe(true);
     expect(checkRefundRequest(db, purchase.id, base.user.id, NOW).ok).toBe(true);
   });
@@ -407,6 +605,46 @@ describe("declining a Refund Request", () => {
     declineRefundRequest(db, id, platformAdmin.id, "Seats are in use.", NOW);
 
     expect(getSeatAvailability(db, getSeat(seats[0].id))).toBe("available");
+  });
+
+  it("notifies the buyer with the reason", () => {
+    vi.stubEnv("APP_URL", "https://cadence.test");
+    const purchase = buyForSelf(base.user.id);
+    const id = raise(purchase.id, base.user.id);
+
+    declineRefundRequest(db, id, platformAdmin.id, "  You finished the course. ", NOW);
+
+    const declined = outboxRows().filter(
+      (row) => row.type === "refund-request-declined"
+    );
+    expect(declined).toHaveLength(1);
+    expect(declined[0]).toMatchObject({
+      recipientId: base.user.id,
+      actorId: platformAdmin.id,
+      status: "pending",
+      data: {
+        recipient: { email: "test@example.com", name: "Test User" },
+        actor_name: "Pat Admin",
+        title: "Refund declined — Test Course",
+        action_url: "/settings",
+        course_title: "Test Course",
+        amount: "$79.00",
+        reason: "You finished the course.",
+        refund_url: "https://cadence.test/settings",
+      },
+    });
+  });
+
+  it("notifies no one when the decline is refused", () => {
+    const purchase = buyForSelf(base.user.id);
+    const id = raise(purchase.id, base.user.id);
+    approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+
+    declineRefundRequest(db, id, platformAdmin.id, "Too late.", NOW);
+
+    expect(
+      outboxRows().filter((row) => row.type === "refund-request-declined")
+    ).toEqual([]);
   });
 });
 

@@ -1,0 +1,7 @@
+Hi {{ recipient.name }},
+
+{{ data.member_name }} redeemed a coupon for "{{ data.course_title }}". It was one of your coupon codes, and they are now enrolled.
+
+{{ data.seats_claimed }} of {{ data.seats_total }} seats on this Team Licence are now claimed.
+
+See your team: {{ data.team_url }}

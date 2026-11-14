@@ -1,0 +1,9 @@
+Hi {{ recipient.name }},
+
+{{ data.buyer_name }} asked for a refund on "{{ data.course_title }}". It is waiting for an Admin to decide it.
+
+The refund would be for {{ data.amount }}, the amount they paid. Their reason:
+
+{{ data.reason }}
+
+Review refund requests: {{ data.refunds_url }}

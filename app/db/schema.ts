@@ -7,6 +7,7 @@ import {
   uniqueIndex,
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
+import type { NotificationKey } from "~/lib/notifications/catalogue";
 
 export enum UserRole {
   Student = "student",
@@ -35,6 +36,12 @@ export enum RefundStatus {
   Open = "open",
   Approved = "approved",
   Declined = "declined",
+}
+
+export enum OutboxStatus {
+  Pending = "pending",
+  Delivered = "delivered",
+  Failed = "failed",
 }
 
 export enum TeamMemberRole {
@@ -374,3 +381,41 @@ export const videoWatchEvents = sqliteTable("video_watch_events", {
     .notNull()
     .$defaultFn(() => new Date().toISOString()),
 });
+
+// One row per Notification waiting to be (or already) handed to the
+// NotificationService. Written in the same transaction as the change that
+// caused it. See docs/adr/0008.
+export const notificationOutbox = sqliteTable(
+  "notification_outbox",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // A UUID made at enqueue, sent as the Idempotency-Key. Not the row id,
+    // because ids restart after a DB reset.
+    idempotencyKey: text("idempotency_key").notNull().unique(),
+    // The catalogue key, which is also the Knock workflow key.
+    type: text("type").notNull().$type<NotificationKey>(),
+    recipientId: integer("recipient_id")
+      .notNull()
+      .references(() => users.id),
+    // Null for system events.
+    actorId: integer("actor_id").references(() => users.id),
+    // JSON snapshot, forwarded to the NotificationService as-is.
+    data: text("data").notNull(),
+    status: text("status")
+      .notNull()
+      .$type<OutboxStatus>()
+      .default(OutboxStatus.Pending),
+    attempts: integer("attempts").notNull().default(0),
+    // The lease and backoff clock.
+    nextAttemptAt: text("next_attempt_at").notNull(),
+    lastError: text("last_error"),
+    createdAt: text("created_at").notNull(),
+    deliveredAt: text("delivered_at"),
+  },
+  (table) => [
+    index("notification_outbox_status_next_attempt_idx").on(
+      table.status,
+      table.nextAttemptAt
+    ),
+  ]
+);

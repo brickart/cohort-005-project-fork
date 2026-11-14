@@ -17,11 +17,46 @@ import { db } from "~/db";
 import { eq } from "drizzle-orm";
 import { formatPrice } from "~/lib/utils";
 import { listRefundRequestsForBuyer } from "~/lib/refunds.server";
+import { isNotificationKey, type NotificationKey } from "~/lib/notifications/catalogue";
+import {
+  changePreference,
+  preferenceCards,
+  type PreferenceCard,
+  type PreferenceRow,
+} from "~/lib/notifications/preferences";
+import { getNotificationService } from "~/lib/notifications/runtime.server";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Switch } from "~/components/ui/switch";
+import { BellOff, Lock } from "lucide-react";
 
-const settingsSchema = z.object({
-  name: z.string().trim().min(1, "Name cannot be empty."),
-  bio: z.string().trim().optional(),
-});
+const formBoolean = z.enum(["true", "false"]).transform((value) => value === "true");
+const channelSchema = z.enum(["email", "in_app_feed"]);
+
+const settingsSchema = z.discriminatedUnion("intent", [
+  z.object({
+    intent: z.literal("profile"),
+    name: z.string().trim().min(1, "Name cannot be empty."),
+    bio: z.string().trim().optional(),
+  }),
+  z.object({
+    intent: z.literal("notification"),
+    type: z.custom<NotificationKey>(
+      (value) => typeof value === "string" && isNotificationKey(value),
+      "Unknown Notification."
+    ),
+    channel: channelSchema,
+    enabled: formBoolean,
+  }),
+  z.object({
+    intent: z.literal("mute-channel"),
+    channel: channelSchema,
+    muted: formBoolean,
+  }),
+  z.object({
+    intent: z.literal("mute-everything"),
+    muted: formBoolean,
+  }),
+]);
 
 export function meta() {
   return [
@@ -50,8 +85,14 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   const refundRequests = listRefundRequestsForBuyer(db, currentUserId);
+  const preferences =
+    await getNotificationService().getPreferences(currentUserId);
 
   return {
+    notificationPreferences: {
+      muteEverything: preferences.muteEverything,
+      cards: preferenceCards(currentUser.role, preferences),
+    },
     user: {
       id: currentUser.id,
       name: currentUser.name,
@@ -86,6 +127,18 @@ export async function action({ request }: Route.ActionArgs) {
     return data({ errors: parsed.errors }, { status: 400 });
   }
 
+  if (parsed.data.intent !== "profile") {
+    const service = getNotificationService();
+    const result = changePreference(
+      await service.getPreferences(currentUser.id),
+      currentUser.role,
+      parsed.data
+    );
+    if (!result.ok) throw data(result.error, { status: result.status });
+    await service.setPreferences(currentUser.id, result.preferences);
+    return { preferencesSaved: true };
+  }
+
   const { name, bio } = parsed.data;
 
   db
@@ -98,7 +151,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Settings({ loaderData }: Route.ComponentProps) {
-  const { user, refundRequests } = loaderData;
+  const { user, refundRequests, notificationPreferences } = loaderData;
   const openCount = refundRequests.filter(
     (refundRequest) => refundRequest.status === RefundStatus.Open
   ).length;
@@ -139,6 +192,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
         </CardHeader>
         <CardContent>
           <fetcher.Form method="post" className="space-y-4">
+            <input type="hidden" name="intent" value="profile" />
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
@@ -188,6 +242,11 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
         </CardContent>
       </Card>
 
+      <NotificationPreferencesSection
+        muteEverything={notificationPreferences.muteEverything}
+        cards={notificationPreferences.cards}
+      />
+
       {refundRequests.length > 0 && (
         <Card className="mt-8 max-w-md">
           <CardHeader>
@@ -236,6 +295,157 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
         </Card>
       )}
     </div>
+  );
+}
+
+// ─── Notification Preferences ───
+
+/** While a change is in flight, show the value it is changing to. */
+function usePendingValue(
+  fetcher: ReturnType<typeof useFetcher>,
+  field: string,
+  current: boolean
+): boolean {
+  const pending = fetcher.formData?.get(field);
+  return typeof pending === "string" ? pending === "true" : current;
+}
+
+function NotificationPreferencesSection({
+  muteEverything,
+  cards,
+}: {
+  muteEverything: boolean;
+  cards: PreferenceCard[];
+}) {
+  const fetcher = useFetcher();
+  const muted = usePendingValue(fetcher, "muted", muteEverything);
+
+  return (
+    <section className="mt-8 max-w-3xl">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Notification Preferences</h2>
+          <p className="text-sm text-muted-foreground">
+            Choose which Notifications you get, and where.
+          </p>
+        </div>
+        <fetcher.Form method="post">
+          <input type="hidden" name="intent" value="mute-everything" />
+          <input type="hidden" name="muted" value={String(!muted)} />
+          <Button type="submit" variant={muted ? "default" : "outline"}>
+            <BellOff />
+            {muted ? "Unmute everything" : "Mute everything"}
+          </Button>
+        </fetcher.Form>
+      </div>
+
+      {muted && (
+        <div
+          role="status"
+          className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+        >
+          Everything is muted. Receipts and Refund Request emails still
+          arrive. Your choices below are kept, and come back when you unmute.
+        </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {cards.map((card) => (
+          <ChannelCard key={card.channel} card={card} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ChannelCard({ card }: { card: PreferenceCard }) {
+  const fetcher = useFetcher();
+  const muted = usePendingValue(fetcher, "muted", card.muted);
+  const switchId = `mute-${card.channel}`;
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <h3 className="font-semibold">{card.title}</h3>
+        <div className="flex items-center gap-2">
+          <Label htmlFor={switchId} className="text-sm text-muted-foreground">
+            Mute
+          </Label>
+          <Switch
+            id={switchId}
+            checked={muted}
+            onCheckedChange={(checked) =>
+              fetcher.submit(
+                {
+                  intent: "mute-channel",
+                  channel: card.channel,
+                  muted: String(checked),
+                },
+                { method: "post" }
+              )
+            }
+          />
+        </div>
+      </CardHeader>
+      <CardContent className={muted ? "opacity-60" : undefined}>
+        <ul className="space-y-3">
+          {card.rows.map((row) => (
+            <PreferenceRowItem
+              key={row.key}
+              row={row}
+              channel={card.channel}
+            />
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PreferenceRowItem({
+  row,
+  channel,
+}: {
+  row: PreferenceRow;
+  channel: PreferenceCard["channel"];
+}) {
+  const fetcher = useFetcher();
+  const enabled = usePendingValue(fetcher, "enabled", row.enabled);
+  const id = `${channel}-${row.key}`;
+
+  if (row.locked) {
+    return (
+      <li className="flex items-center justify-between gap-3 text-sm">
+        <span>{row.label}</span>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Lock className="size-3.5" />
+          Always sent
+        </span>
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex items-center justify-between gap-3 text-sm">
+      <Label htmlFor={id} className="font-normal">
+        {row.label}
+      </Label>
+      <Checkbox
+        id={id}
+        checked={enabled}
+        onCheckedChange={(checked) =>
+          fetcher.submit(
+            {
+              intent: "notification",
+              type: row.key,
+              channel,
+              enabled: String(checked === true),
+            },
+            { method: "post" }
+          )
+        }
+      />
+    </li>
   );
 }
 

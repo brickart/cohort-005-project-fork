@@ -1,0 +1,13 @@
+{
+  "name": "Button",
+  "type": "html",
+  "description": "The call to action in an Email. Takes `url` and `label`.",
+  "visual_block_enabled": false,
+  "icon_name": "BellDot",
+  "content@": "content.html",
+  "__readonly": {
+    "key": "button",
+    "valid": true
+  },
+  "$schema": "https://schemas.knock.app/cli/partial.json"
+}

@@ -1,0 +1,5 @@
+<p>Hi {{ recipient.name | escape }},</p>
+<p>You paid {{ data.amount }} for {% if data.is_team_purchase %}{{ data.seats }} {% if data.seats == 1 %}seat{% else %}seats{% endif %} on {% endif %}<strong>{{ data.course_title | escape }}</strong>. This email is your receipt.</p>
+{% if data.is_team_purchase %}<p>Your coupon codes are waiting on your team page. Share one with each person you want to give a place to.</p>
+{% render 'button', url: data.team_url, label: "Go to your team" %}{% else %}<p>You are enrolled, so you can start whenever you like.</p>
+{% render 'button', url: data.course_url, label: "Go to the course" %}{% endif %}

@@ -1,0 +1,6 @@
+<p>Hi {{ recipient.name | escape }},</p>
+<p>We approved your refund for <strong>{{ data.course_title | escape }}</strong> ({{ data.amount }}).</p>
+<p>{{ data.amount }}, the full amount you paid, is on its way back to you.</p>
+{% if data.outcome == "seats_cancelled" %}<p>The Unclaimed Seats on your Team Licence can no longer be claimed. Seats your team has already claimed are not affected.</p>{% elsif data.outcome == "enrollment_kept" %}<p>You keep your place on the course through the Seat your team gave you.</p>{% else %}<p>Your Enrollment on the course has ended. Your progress is kept, so it will be there if you come back.</p>{% endif %}
+{% if data.note %}<p>A note from our team: {{ data.note | escape }}</p>{% endif %}
+{% render 'button', url: data.refund_url, label: "View your refund requests" %}

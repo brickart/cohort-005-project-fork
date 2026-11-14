@@ -1,0 +1,8 @@
+Hi {{ recipient.name }},
+
+We have your refund request for "{{ data.course_title }}" ({{ data.amount }}).
+{{ data.amount }} is the full amount you paid.
+
+Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.
+
+View your refund request: {{ data.refund_url }}

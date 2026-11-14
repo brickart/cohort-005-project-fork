@@ -1,0 +1,12 @@
+Hi {{ recipient.name }},
+
+You paid {{ data.amount }} for {% if data.is_team_purchase %}{{ data.seats }} {% if data.seats == 1 %}seat{% else %}seats{% endif %} on {% endif %}"{{ data.course_title }}". This email is your receipt.
+{% if data.is_team_purchase %}
+Your coupon codes are waiting on your team page. Share one with each person you want to give a place to.
+
+Go to your team: {{ data.team_url }}
+{% else %}
+You are enrolled, so you can start whenever you like.
+
+Go to the course: {{ data.course_url }}
+{% endif %}

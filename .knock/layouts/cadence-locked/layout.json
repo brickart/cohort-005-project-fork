@@ -1,0 +1,11 @@
+{
+  "name": "Cadence (always sent)",
+  "is_mjml": false,
+  "branding_overrides": {},
+  "html_layout@": "html_layout.html",
+  "text_layout@": "text_layout.txt",
+  "__readonly": {
+    "key": "cadence-locked"
+  },
+  "$schema": "https://schemas.knock.app/cli/email-layout.json"
+}

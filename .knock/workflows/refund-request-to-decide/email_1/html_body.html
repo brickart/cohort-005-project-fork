@@ -1,0 +1,5 @@
+<p>Hi {{ recipient.name | escape }},</p>
+<p>{{ data.buyer_name | escape }} asked for a refund on <strong>{{ data.course_title | escape }}</strong>. It is waiting for an Admin to decide it.</p>
+<p>The refund would be for {{ data.amount }}, the amount they paid. Their reason:</p>
+<blockquote style="margin: 0 0 16px; padding: 0 0 0 12px; border-left: 3px solid #e4e4e7; color: #52525b;">{{ data.reason | escape | newline_to_br }}</blockquote>
+{% render 'button', url: data.refunds_url, label: "Review refund requests" %}

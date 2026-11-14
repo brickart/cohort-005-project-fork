@@ -1,0 +1,42 @@
+{
+  "name": "Purchase confirmed",
+  "description": "The receipt for a purchase, sent to the buyer: the Learner, or the Team Manager for a team purchase. Locked: always sent.",
+  "steps": [
+    {
+      "type": "channel",
+      "template": {
+        "subject": "You paid {{ data.amount }} for {% if data.is_team_purchase %}{{ data.seats }} {% if data.seats == 1 %}seat{% else %}seats{% endif %} on {% endif %}{{ data.course_title }}",
+        "settings": {
+          "layout_key": "cadence-locked",
+          "attachment_key": "attachments"
+        },
+        "text_body@": "email_1/text_body.txt",
+        "html_body@": "email_1/html_body.html"
+      },
+      "ref": "email_1",
+      "channel_type": "email",
+      "channel_key": "knock-email"
+    },
+    {
+      "type": "channel",
+      "template": {
+        "action_url": "{{ data.action_url }}",
+        "markdown_body@": "in_app_feed_1/markdown_body.md"
+      },
+      "ref": "in_app_feed_1",
+      "channel_type": "in_app_feed",
+      "channel_key": "in-app"
+    }
+  ],
+  "settings": {
+    "override_preferences": true,
+    "is_commercial": false
+  },
+  "trigger_frequency": "every_trigger",
+  "__readonly": {
+    "key": "purchase-confirmed",
+    "active": true,
+    "valid": true
+  },
+  "$schema": "https://schemas.knock.app/cli/workflow.json"
+}
