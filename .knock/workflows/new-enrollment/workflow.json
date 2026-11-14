@@ -1,19 +1,26 @@
 {
   "name": "New Enrollment",
   "description": "Tells a course's Instructor that a Learner enrolled through an individual purchase. In-app only.",
-  "categories": ["cadence"],
-  "settings": {
-    "override_recipient_preferences": false
-  },
   "steps": [
     {
-      "ref": "in_app_feed_1",
       "type": "channel",
-      "channel_key": "in-app-feed",
       "template": {
         "action_url": "{{ data.action_url }}",
         "markdown_body@": "in_app_feed_1/markdown_body.md"
-      }
+      },
+      "ref": "in_app_feed_1",
+      "channel_type": "in_app_feed",
+      "channel_key": "in-app"
     }
-  ]
+  ],
+  "categories": [
+    "cadence"
+  ],
+  "trigger_frequency": "every_trigger",
+  "__readonly": {
+    "key": "new-enrollment",
+    "active": true,
+    "valid": true
+  },
+  "$schema": "https://schemas.knock.app/cli/workflow.json"
 }

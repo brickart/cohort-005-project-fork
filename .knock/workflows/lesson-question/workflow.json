@@ -1,32 +1,41 @@
 {
   "name": "New question on a lesson",
   "description": "Tells a course's Instructor that a Learner asked a new question on one of its lessons.",
-  "categories": ["cadence"],
-  "settings": {
-    "override_recipient_preferences": false
-  },
   "steps": [
     {
-      "ref": "email_1",
       "type": "channel",
-      "channel_key": "email",
       "template": {
-        "settings": {
-          "layout_key": "default"
-        },
         "subject": "{{ data.actor_name }} asked a new question on {{ data.lesson_title }} in {{ data.course_title }}",
-        "html_body@": "email_1/html_body.html",
-        "text_body@": "email_1/text_body.txt"
-      }
+        "settings": {
+          "layout_key": "default",
+          "attachment_key": "attachments"
+        },
+        "text_body@": "email_1/text_body.txt",
+        "html_body@": "email_1/html_body.html"
+      },
+      "ref": "email_1",
+      "channel_type": "email",
+      "channel_key": "knock-email"
     },
     {
-      "ref": "in_app_feed_1",
       "type": "channel",
-      "channel_key": "in-app-feed",
       "template": {
         "action_url": "{{ data.action_url }}",
         "markdown_body@": "in_app_feed_1/markdown_body.md"
-      }
+      },
+      "ref": "in_app_feed_1",
+      "channel_type": "in_app_feed",
+      "channel_key": "in-app"
     }
-  ]
+  ],
+  "categories": [
+    "cadence"
+  ],
+  "trigger_frequency": "every_trigger",
+  "__readonly": {
+    "key": "lesson-question",
+    "active": true,
+    "valid": true
+  },
+  "$schema": "https://schemas.knock.app/cli/workflow.json"
 }

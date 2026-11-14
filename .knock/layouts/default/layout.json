@@ -1,6 +1,11 @@
 {
-  "key": "default",
   "name": "Cadence",
+  "is_mjml": false,
+  "branding_overrides": {},
   "html_layout@": "html_layout.html",
-  "text_layout@": "text_layout.txt"
+  "text_layout@": "text_layout.txt",
+  "__readonly": {
+    "key": "default"
+  },
+  "$schema": "https://schemas.knock.app/cli/email-layout.json"
 }

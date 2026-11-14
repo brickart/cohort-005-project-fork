@@ -12,7 +12,7 @@
     "dev": "react-router dev",
     "dev:knock": "node --env-file=.env --network-family-autoselection-attempt-timeout=500 ./node_modules/@react-router/dev/bin.cjs dev",
     "start": "react-router-serve ./build/server/index.js",
-    "knock:push": "node --env-file=.env ./node_modules/@knocklabs/cli/bin/run.js push --knock-dir=.knock --environment=development --commit --commit-message=\"Push .knock/ from the repo\"",
+    "knock:push": "node --env-file=.env --network-family-autoselection-attempt-timeout=500 ./node_modules/@knocklabs/cli/bin/run.js push --knock-dir=.knock --environment=development --commit --commit-message=\"Push .knock/ from the repo\"",
     "request-logger": "tsx request-logger/proxy.ts",
     "typecheck": "react-router typegen && tsc",
     "test": "vitest run",

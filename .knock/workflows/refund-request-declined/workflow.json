@@ -1,31 +1,38 @@
 {
   "name": "Refund Request declined",
   "description": "Tells the buyer an Admin declined their Refund Request, with the reason, and that they may raise a new one. Locked: always sent.",
-  "settings": {
-    "override_recipient_preferences": true
-  },
   "steps": [
     {
-      "ref": "email_1",
       "type": "channel",
-      "channel_key": "email",
       "template": {
-        "settings": {
-          "layout_key": "cadence-locked"
-        },
         "subject": "We declined your refund request for {{ data.course_title }}",
-        "html_body@": "email_1/html_body.html",
-        "text_body@": "email_1/text_body.txt"
-      }
+        "settings": {
+          "layout_key": "cadence-locked",
+          "attachment_key": "attachments"
+        },
+        "text_body@": "email_1/text_body.txt",
+        "html_body@": "email_1/html_body.html"
+      },
+      "ref": "email_1",
+      "channel_type": "email",
+      "channel_key": "knock-email"
     },
     {
-      "ref": "in_app_feed_1",
       "type": "channel",
-      "channel_key": "in-app-feed",
       "template": {
         "action_url": "{{ data.action_url }}",
         "markdown_body@": "in_app_feed_1/markdown_body.md"
-      }
+      },
+      "ref": "in_app_feed_1",
+      "channel_type": "in_app_feed",
+      "channel_key": "in-app"
     }
-  ]
+  ],
+  "trigger_frequency": "every_trigger",
+  "__readonly": {
+    "key": "refund-request-declined",
+    "active": true,
+    "valid": true
+  },
+  "$schema": "https://schemas.knock.app/cli/workflow.json"
 }

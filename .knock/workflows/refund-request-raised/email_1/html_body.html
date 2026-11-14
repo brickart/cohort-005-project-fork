@@ -2,4 +2,4 @@
 <p>We have your refund request for <strong>{{ data.course_title | escape }}</strong> ({{ data.amount }}).</p>
 <p>{{ data.amount }} is the full amount you paid.</p>
 <p>Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.</p>
-{% partial "button", url: data.refund_url, label: "View your refund request" %}
+{% render 'button', url: data.refund_url, label: "View your refund request" %}

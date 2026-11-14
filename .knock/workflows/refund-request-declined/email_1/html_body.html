@@ -2,4 +2,4 @@
 <p>We declined your refund request for <strong>{{ data.course_title | escape }}</strong>.</p>
 <p>Why: {{ data.reason | escape }}</p>
 <p>You still have everything you bought. If something changes, you can raise a new refund request.</p>
-{% partial "button", url: data.refund_url, label: "View your refund requests" %}
+{% render 'button', url: data.refund_url, label: "View your refund requests" %}

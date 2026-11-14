@@ -126,8 +126,9 @@ export function readWorkflow(
 function createEngine(knockDir: string): Liquid {
   const engine = new Liquid({ strictVariables: true, strictFilters: true });
 
-  // Knock's `{% partial "key", name: value %}`: renders
-  // .knock/partials/<key>/ with only the arguments in scope.
+  // Knock's `{% render 'key', name: value %}`: renders
+  // .knock/partials/<key>/ with only the arguments in scope. Replaces
+  // liquidjs's own render tag, which would look for a file on disk.
   class PartialTag extends Tag {
     private readonly partialKey: string;
     private readonly args: Hash;
@@ -152,7 +153,7 @@ function createEngine(knockDir: string): Liquid {
     }
   }
 
-  engine.registerTag("partial", PartialTag);
+  engine.registerTag("render", PartialTag);
   return engine;
 }
 

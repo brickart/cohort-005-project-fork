@@ -10,11 +10,16 @@ Development environment instead.
 1. Copy `.env.example` to `.env` (gitignored) and fill it in from the Knock
    dashboard (Developers → API keys, the In-app feed channel's id, and a
    service token for the CLI).
-2. `npm run knock:push` pushes and commits everything in `.knock/`
+2. In the dashboard, under Platform → Preferences → Preference center, add a
+   category with the key `cadence` in each environment. Knock rejects any
+   workflow whose category isn't there yet, and neither the CLI nor the
+   Management API can create one. (`knock workflow validate` doesn't catch
+   this; only the push does.)
+3. `npm run knock:push` pushes and commits everything in `.knock/`
    (workflows, layouts, partials) to the Development environment with
    `knock push --commit`. Run it whenever `.knock/` changes. Dashboard editing
    of content stays off; only branding, channels and providers live there.
-3. `npm run dev:knock` starts the dev server with `.env` loaded. Cadence picks
+4. `npm run dev:knock` starts the dev server with `.env` loaded. Cadence picks
    the Knock `NotificationService` whenever `KNOCK_API_SECRET_KEY` is set
    (never under vitest), and throws a clear error if
    `KNOCK_FEED_CHANNEL_ID` is missing.
@@ -30,11 +35,13 @@ identified inline when a workflow is triggered.
   step uses `"layout_key": "default"`. Locked Emails use `cadence-locked`.
   Don't rename the directory or key to `cadence`: the workflows would point
   at a layout Knock doesn't have.
-- **`"channel_key": "in-app-feed"`** in every workflow's In-app step must be
-  the key of the In-app feed channel in the Knock dashboard (Integrations →
-  Channels). If the dashboard channel has another key, the In-app step
-  doesn't reach the feed Cadence reads. `KNOCK_FEED_CHANNEL_ID` is that same
-  channel's id (a UUID), which the feed API needs.
+- **Channel keys.** Every workflow's In-app step uses `"channel_key": "in-app"`
+  and every Email step `"channel_key": "knock-email"`. These must be the keys
+  of the channels in the Knock dashboard (Integrations → Channels): if a key
+  doesn't exist, `knock push` rejects the workflow, and if the In-app key
+  names another feed, the In-app step doesn't reach the feed Cadence reads.
+  `KNOCK_FEED_CHANNEL_ID` is the `in-app` channel's id (a UUID), which the
+  feed API needs.
 
 ## The drainer at boot
 
