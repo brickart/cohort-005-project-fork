@@ -110,7 +110,7 @@ export function readWorkflow(
   return {
     key,
     overridesPreferences:
-      asObject(workflow.settings).override_recipient_preferences === true,
+      asObject(workflow.settings).override_preferences === true,
     categories: Array.isArray(workflow.categories)
       ? workflow.categories.filter(
           (category): category is string => typeof category === "string"

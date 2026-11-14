@@ -28,6 +28,10 @@
       "channel_key": "in-app"
     }
   ],
+  "settings": {
+    "override_preferences": true,
+    "is_commercial": false
+  },
   "trigger_frequency": "every_trigger",
   "__readonly": {
     "key": "refund-request-declined",
