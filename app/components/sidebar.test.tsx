@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoutesStub } from "react-router";
 import { UserRole } from "~/db/schema";
-import { SidebarUserCard } from "./sidebar";
+import { Sidebar, SidebarUserCard } from "./sidebar";
 
 function renderUserCard(name: string) {
   const user = { id: 1, name, role: UserRole.Student, avatarUrl: null };
@@ -34,5 +34,42 @@ describe("SidebarUserCard", () => {
     expect(html).toMatch(/<a[^>]*href="\/settings"[^>]*>.*Settings<\/a>/);
     expect(html).toMatch(/<form[^>]*action="\/api\/logout"/);
     expect(html).toMatch(/<button type="submit"[^>]*>.*Sign out<\/button>/);
+  });
+});
+
+function renderRecentCourse(title: string) {
+  const course = {
+    courseId: 1,
+    title,
+    slug: "a-course",
+    coverImageUrl: null,
+    completedLessons: 1,
+    totalLessons: 4,
+    progress: 25,
+  };
+  const Stub = createRoutesStub([
+    {
+      path: "/",
+      Component: () => <Sidebar currentUser={null} recentCourses={[course]} />,
+    },
+  ]);
+  return renderToStaticMarkup(<Stub initialEntries={["/"]} />);
+}
+
+describe("Sidebar recent courses", () => {
+  const title = "Building REST APIs with Node.js";
+
+  it("wraps a long course title to two lines instead of clipping it", () => {
+    const html = renderRecentCourse(title);
+    expect(html).toMatch(
+      new RegExp(`class="[^"]*\\bline-clamp-2\\b[^"]*">${title}</div>`)
+    );
+    expect(html).not.toMatch(
+      new RegExp(`class="[^"]*\\btruncate\\b[^"]*">${title}</div>`)
+    );
+  });
+
+  it("puts the full course title in a tooltip", () => {
+    expect(renderRecentCourse(title)).toContain(`title="${title}"`);
   });
 });

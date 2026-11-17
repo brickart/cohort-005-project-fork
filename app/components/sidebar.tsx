@@ -199,7 +199,10 @@ export function Sidebar({
                   )
                 }
               >
-                <div className="truncate text-sm font-medium">
+                <div
+                  title={course.title}
+                  className="line-clamp-2 break-words text-sm font-medium"
+                >
                   {course.title}
                 </div>
                 <div className="mt-1 flex items-center gap-2">
