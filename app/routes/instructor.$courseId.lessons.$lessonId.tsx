@@ -91,16 +91,15 @@ export function meta({ loaderData }: Route.MetaArgs) {
 const lessonParamsSchema = z.object({ lessonId: idParam });
 
 export async function loader({ params, request }: Route.LoaderArgs) {
-  const { lessonId: paramLessonId } = parseParams(params, lessonParamsSchema, {
+  const { lessonId } = parseParams(params, lessonParamsSchema, {
     notFound: "Lesson not found.",
   });
   const { course } = await coursePermissions.requireCapability(
     request,
     "manage",
-    { courseId: params.courseId, lessonId: paramLessonId }
+    { courseId: params.courseId, lessonId }
   );
-  const { lesson, module: mod } = getLessonWithModule(paramLessonId);
-  const lessonId = lesson.id;
+  const { lesson, module: mod } = getLessonWithModule(lessonId);
 
   const quiz = getQuizByLessonId(lessonId);
 

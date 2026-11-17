@@ -78,21 +78,20 @@ export function meta({ loaderData }: Route.MetaArgs) {
 const lessonParamsSchema = z.object({ lessonId: idParam });
 
 export async function loader({ params, request }: Route.LoaderArgs) {
-  const { lessonId: paramLessonId } = parseParams(params, lessonParamsSchema, {
+  const { lessonId } = parseParams(params, lessonParamsSchema, {
     notFound: "Lesson not found.",
   });
   const { course } = await coursePermissions.requireCapability(
     request,
     "manage",
-    { courseId: params.courseId, lessonId: paramLessonId }
+    { courseId: params.courseId, lessonId }
   );
   // requireCapability has checked this is a lesson in the course.
-  const lesson = getLessonById(paramLessonId);
+  const lesson = getLessonById(lessonId);
   const mod = lesson && getModuleById(lesson.moduleId);
   if (!lesson || !mod) {
     throw data("Lesson not found.", { status: 404 });
   }
-  const lessonId = lesson.id;
 
   // Load existing quiz if present
   const existingQuizBasic = getQuizByLessonId(lessonId);
