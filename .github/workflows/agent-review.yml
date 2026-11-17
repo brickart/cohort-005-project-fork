@@ -4,9 +4,12 @@ name: Agent — Review A Pull Request
 # built.
 #
 # WHAT TRIGGERS IT
-#   Someone puts the `agent:review` label on a pull request. agent.yml
-#   receives the label event and calls this file; it also holds this
-#   workflow's concurrency group (one review per PR, never cancelled).
+#   Someone puts the `agent:review` label on a pull request. The
+#   implementer does this itself for every pull request it opens, and so does
+#   agent-implement-spec.yml. Add it by hand to review again, or when that
+#   hand-off failed. agent.yml receives the label event and calls this file;
+#   it also holds this workflow's concurrency group (one review per PR, never
+#   cancelled).
 #
 # THE POINT OF THIS FILE: IT IS MEMORY-LESS
 #   This workflow shares nothing with the implementer run. No session, no
