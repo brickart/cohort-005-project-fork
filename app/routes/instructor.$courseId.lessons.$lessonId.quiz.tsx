@@ -28,7 +28,7 @@ import {
 } from "~/components/quiz-wizard/wizard-state";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData, parseParams } from "~/lib/validation";
+import { idParam, parseFormData, parseParams } from "~/lib/validation";
 
 const wizardDataSchema = z.object({
   title: z.string().trim().min(1, "Quiz title is required."),
@@ -75,9 +75,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 // ─── Loader ───
 
-const lessonParamsSchema = z.object({
-  lessonId: z.coerce.number().int().positive(),
-});
+const lessonParamsSchema = z.object({ lessonId: idParam });
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   const { lessonId: paramLessonId } = parseParams(params, lessonParamsSchema, {

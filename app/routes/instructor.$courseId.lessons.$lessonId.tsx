@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData, parseParams } from "~/lib/validation";
+import { idParam, parseFormData, parseParams } from "~/lib/validation";
 
 const updateLessonSchema = z.object({
   intent: z.literal("update-lesson"),
@@ -88,9 +88,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
-const lessonParamsSchema = z.object({
-  lessonId: z.coerce.number().int().positive(),
-});
+const lessonParamsSchema = z.object({ lessonId: idParam });
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   const { lessonId: paramLessonId } = parseParams(params, lessonParamsSchema, {

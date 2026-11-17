@@ -21,7 +21,8 @@ a type and you do not check it again. Coerce numbers through the schema, not
 for every learner. Inside `app/routes/` oxlint enforces the `Number()` part
 (`input/no-number-on-input`): it flags `Number()` on a `params.*` member, a
 `formData.get()` call or a `searchParams.get()` call. Parse route params with
-`parseParams` and form data with `parseFormData` (`app/lib/validation.ts`).
+`parseParams` and form data with `parseFormData`, and an id with `idParam`
+(all in `app/lib/validation.ts`).
 Everything else in this section, you apply by hand.
 
 ## Check permission in the action, not only the loader

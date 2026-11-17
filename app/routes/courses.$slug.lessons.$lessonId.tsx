@@ -21,7 +21,7 @@ import { AlertTriangle } from "lucide-react";
 import { renderMarkdown } from "~/lib/markdown.server";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData, parseParams } from "~/lib/validation";
+import { idParam, parseFormData, parseParams } from "~/lib/validation";
 import {
   getCommentById,
   getLessonThread,
@@ -111,9 +111,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: `${title} — ${courseTitle} — Cadence` }];
 }
 
-const lessonParamsSchema = z.object({
-  lessonId: z.coerce.number().int().positive(),
-});
+const lessonParamsSchema = z.object({ lessonId: idParam });
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   const { lessonId } = parseParams(params, lessonParamsSchema, {

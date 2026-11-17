@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { parseParams } from "./validation";
+import { idParam, parseParams } from "./validation";
 
-const schema = z.object({ lessonId: z.coerce.number().int().positive() });
+const schema = z.object({ lessonId: idParam });
 
 function thrownBy(run: () => unknown) {
   try {

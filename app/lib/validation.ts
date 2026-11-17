@@ -1,5 +1,5 @@
 import { data } from "react-router";
-import type { z } from "zod";
+import { z } from "zod";
 
 type ParseSuccess<T> = { success: true; data: T };
 type ParseFailure = {
@@ -33,6 +33,12 @@ export function parseFormData<T extends z.ZodType>(
 
   return { success: false, errors };
 }
+
+/**
+ * A database id from a route param or a form field. `Number("")` is 0, so an
+ * empty or malformed id fails here instead of reaching a query.
+ */
+export const idParam = z.coerce.number().int().positive();
 
 /**
  * Validates route params with a Zod schema.

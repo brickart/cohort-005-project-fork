@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseParams } from "~/lib/validation";
+import { idParam, parseParams } from "~/lib/validation";
 import { formatDuration } from "~/lib/utils";
 
 function getCourseWithDetails(id: number) {
@@ -137,9 +137,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: `${moduleTitle} — ${courseTitle} — Cadence` }];
 }
 
-const moduleParamsSchema = z.object({
-  moduleId: z.coerce.number().int().positive(),
-});
+const moduleParamsSchema = z.object({ moduleId: idParam });
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   const { moduleId } = parseParams(params, moduleParamsSchema, {
