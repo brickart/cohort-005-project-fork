@@ -3,5 +3,6 @@ export {
   computeResult,
   getBestAttempt,
   getQuizByLessonId,
+  getQuizInLesson,
   getQuizWithQuestions,
 } from "./lib/quiz.server";
