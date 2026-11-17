@@ -5,6 +5,8 @@ name: Agent — Implement A Ticket
 # WHAT TRIGGERS IT
 #   Someone puts the `agent:implement` label on an issue. That is the whole
 #   interface. No comment, no trigger phrase, no @mention — one label.
+#   agent.yml receives the label event and calls this file; it also holds this
+#   workflow's concurrency group (one run per ticket).
 #
 # WHAT IT DOES
 #   Checks the repo out, gives an agent the ticket and the repo's own
@@ -31,8 +33,9 @@ name: Agent — Implement A Ticket
 #     the pull request, commenting. One token for the whole factory, because some
 #     hops need it anyway — by default the built-in GITHUB_TOKEN cannot open a
 #     pull request at all, and a label it applies starts no workflow.
-#   secrets.GITHUB_TOKEN — supplied by Actions, and now used for one thing:
-#     the checkout. The `permissions:` block below shrinks it to match.
+#   secrets.GITHUB_TOKEN — supplied by Actions, and used for two things: the
+#     checkout, and `agent:in-progress` in the `claim` job. The
+#     `permissions:` blocks below shrink it to match.
 #   The `agent:implement` label. A fresh clone of this repository does not
 #     have it, and no workflow can create the label that starts it. Create it
 #     once:
@@ -68,26 +71,45 @@ name: Agent — Implement A Ticket
 #   the agent runs.
 
 on:
-  issues:
-    types: [labeled]
+  workflow_call:
 
-# The permissions block. It is per-workflow, and it is a ceiling on the
-# GITHUB_TOKEN — and the GITHUB_TOKEN now only checks the code out. Everything
-# that writes goes through FACTORY_PAT, whose reach is set where you created
-# it, not here.
+# The permissions block. It is a ceiling on the GITHUB_TOKEN, under the one
+# agent.yml grants. The token checks the code out, and the `claim` job uses it
+# for one more thing: `agent:in-progress`. A label applied with GITHUB_TOKEN
+# starts no workflow, so claiming the ticket adds no run to the Actions list.
+# Everything else that writes goes through FACTORY_PAT, whose reach is set
+# where you created it, not here.
 permissions:
   contents: read # the checkout
 
-# One run per ticket. A second label event on the same issue waits for the
-# first to finish rather than building the same ticket twice at once.
-concurrency:
-  group: agent-implement-${{ github.event.issue.number }}
-  cancel-in-progress: false
-
 jobs:
+  # Its own job so the GITHUB_TOKEN that can write labels never shares a job
+  # with the agent.
+  claim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Transition labels
+        # The trigger comes off, so putting it back on is how you retry.
+        # `agent:in-progress` goes on until the run ends, however it ends.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # A fresh clone of this repository does not have these labels yet.
+          gh label create "agent:in-progress" --color FBCA04 \
+            --description "An agent is working on this right now" || true
+          gh label create "agent:blocked" --color B60205 \
+            --description "An agent run failed here. Its comment says how to retry" || true
+          gh issue edit "$ISSUE_NUMBER" --remove-label "agent:implement" || true
+          gh issue edit "$ISSUE_NUMBER" --remove-label "agent:blocked" || true
+          gh issue edit "$ISSUE_NUMBER" --add-label "agent:in-progress"
+
   implement:
-    # Every other label on every other issue stops here, for free.
-    if: github.event.label.name == 'agent:implement'
+    needs: claim
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -99,21 +121,6 @@ jobs:
       RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     steps:
-      - name: Transition labels
-        # The trigger comes off, so putting it back on is how you retry.
-        # `agent:in-progress` goes on until the run ends, however it ends.
-        env:
-          GH_TOKEN: ${{ secrets.FACTORY_PAT }}
-        run: |
-          # A fresh clone of this repository does not have these labels yet.
-          gh label create "agent:in-progress" --color FBCA04 \
-            --description "An agent is working on this right now" || true
-          gh label create "agent:blocked" --color B60205 \
-            --description "An agent run failed here. Its comment says how to retry" || true
-          gh issue edit "$ISSUE_NUMBER" --remove-label "agent:implement" || true
-          gh issue edit "$ISSUE_NUMBER" --remove-label "agent:blocked" || true
-          gh issue edit "$ISSUE_NUMBER" --add-label "agent:in-progress"
-
       - name: Checkout
         uses: actions/checkout@v4
         with:

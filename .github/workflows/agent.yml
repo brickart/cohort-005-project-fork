@@ -1,0 +1,98 @@
+name: Agent
+
+# The software factory's front door: every label event lands here, and only
+# here.
+#
+# WHY A ROUTER
+#   GitHub has no label filter in `on:`. A workflow that listens to
+#   `issues: [labeled]` gets a run for EVERY label put on every issue, and its
+#   `if:` can only skip that run after it appears in the Actions list. With
+#   one listening workflow per agent, one label meant one run per workflow,
+#   most of them grey "skipped" rows. Now one label is one run of this file,
+#   and the job whose label matches does the work.
+#
+# WHAT IT ROUTES
+#   agent:explore         (issue) → agent-explore.yml     (workflow_call)
+#   agent:implement       (issue) → agent-implement.yml   (workflow_call)
+#   agent:review          (PR)    → agent-review.yml      (workflow_call)
+#   agent:implement-spec  (issue) → agent-implement-spec.yml, dispatched.
+#     Not called: that workflow also runs on a cron and dispatches itself, and
+#     its one-at-a-time queue is a workflow-level concurrency group. A
+#     dispatch puts the label run in the same queue as those runs.
+#
+# CONCURRENCY LIVES HERE
+#   On the job that calls each workflow, not in the called file. Same rules as
+#   before: never cancelled, a second run waits for the first.
+#
+# THE FACTORY'S OWN LABELS
+#   `agent:in-progress` is applied with GITHUB_TOKEN, which starts no
+#   workflow, so claiming a ticket adds no run here. Labels the factory
+#   applies with FACTORY_PAT (`agent:review`, `agent:blocked`, `agent:queued`,
+#   `spec:<n>`) still land here; `agent:review` is meant to, the rest show as
+#   one skipped run each.
+
+run-name: "${{ github.event.label.name }} · ${{ github.event.issue.title || github.event.pull_request.title }}"
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+
+# Each job below sets its own ceiling. The called workflows can only narrow it.
+permissions: {}
+
+jobs:
+  explore:
+    if: github.event_name == 'issues' && github.event.label.name == 'agent:explore'
+    # One batch at a time. A label that lands mid-run queues one more run,
+    # which lists the batch again when it starts.
+    concurrency:
+      group: agent-explore
+      cancel-in-progress: false
+    permissions:
+      contents: read # the checkout
+      issues: write # claiming the batch with agent:in-progress
+    uses: ./.github/workflows/agent-explore.yml
+    secrets: inherit
+
+  implement:
+    if: github.event_name == 'issues' && github.event.label.name == 'agent:implement'
+    # One run per ticket: a second `agent:implement` waits for the first.
+    concurrency:
+      group: agent-implement-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read # the checkout
+      issues: write # claiming the ticket with agent:in-progress
+    uses: ./.github/workflows/agent-implement.yml
+    secrets: inherit
+
+  review:
+    if: github.event_name == 'pull_request' && github.event.label.name == 'agent:review'
+    # One review per PR, never cancelled: a cancelled review would lose the
+    # commits it made.
+    concurrency:
+      group: agent-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read # the checkout
+      issues: write # claiming the PR with agent:in-progress
+      pull-requests: write
+    uses: ./.github/workflows/agent-review.yml
+    secrets: inherit
+
+  implement-spec:
+    if: github.event_name == 'issues' && github.event.label.name == 'agent:implement-spec'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write # workflow_dispatch is the one event GITHUB_TOKEN may start
+    steps:
+      - name: Start the spec queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SPEC: ${{ github.event.issue.number }}
+          REF: ${{ github.event.repository.default_branch }}
+        run: gh workflow run agent-implement-spec.yml --ref "$REF" --field "spec_issue=${SPEC}"
