@@ -148,7 +148,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   // module from another course.
   const decisions = await coursePermissions.getCourseDecisions(request, {
     slug: params.slug,
-    moduleId: params.moduleId,
+    moduleId,
   });
   if (!decisions.found) {
     throw data("Module not found", { status: 404 });

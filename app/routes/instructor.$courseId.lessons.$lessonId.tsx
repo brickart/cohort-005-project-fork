@@ -97,7 +97,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const { course } = await coursePermissions.requireCapability(
     request,
     "manage",
-    { courseId: params.courseId, lessonId: params.lessonId }
+    { courseId: params.courseId, lessonId: paramLessonId }
   );
   const { lesson, module: mod } = getLessonWithModule(paramLessonId);
   const lessonId = lesson.id;
@@ -113,7 +113,7 @@ export async function action({ params, request }: Route.ActionArgs) {
   });
   await coursePermissions.requireCapability(request, "manage", {
     courseId: params.courseId,
-    lessonId: params.lessonId,
+    lessonId,
   });
 
   const formData = await request.formData();

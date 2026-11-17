@@ -109,7 +109,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const { course } = await coursePermissions.requireCapability(
     request,
     "manage",
-    { courseId: params.courseId, moduleId: params.moduleId }
+    { courseId: params.courseId, moduleId }
   );
 
   // requireCapability has checked this is a module in the course.

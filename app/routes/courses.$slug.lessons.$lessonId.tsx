@@ -84,10 +84,10 @@ const deleteCommentSchema = z.object({
 
 /**
  * The course named by this route's slug, through this lesson. A lesson in
- * another course, or a malformed lesson id, counts as not found.
+ * another course counts as not found.
  */
-function lessonRef(params: { slug: string; lessonId: string }): CourseRef {
-  return { slug: params.slug, lessonId: params.lessonId };
+function lessonRef(slug: string, lessonId: number): CourseRef {
+  return { slug, lessonId };
 }
 
 /**
@@ -121,7 +121,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   // from another course.
   const decisions = await coursePermissions.getCourseDecisions(
     request,
-    lessonRef(params)
+    lessonRef(params.slug, lessonId)
   );
   if (!decisions.found) {
     throw data("Lesson not found", { status: 404 });
@@ -319,7 +319,7 @@ export async function action({ params, request }: Route.ActionArgs) {
   if (!capability) {
     throw data("Invalid action", { status: 400 });
   }
-  const ref = lessonRef(params);
+  const ref = lessonRef(params.slug, lessonId);
   const { person } = await coursePermissions.requireCapability(
     request,
     capability,
