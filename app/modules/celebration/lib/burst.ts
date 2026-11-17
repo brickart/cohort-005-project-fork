@@ -12,6 +12,11 @@ export type BurstOptions = {
 
 export type Fire = (options: BurstOptions) => void;
 
+type Burst = Omit<BurstOptions, "origin">;
+
+const FOUNTAIN: Burst = { particleCount: 120, spread: 100, startVelocity: 55 };
+const RING: Burst = { particleCount: 80, spread: 360, startVelocity: 40 };
+
 /**
  * The centre of `target` as fractions of `frame`. The frame is the content
  * area, not the window, so the sidebar does not pull the burst off-centre.
@@ -40,6 +45,6 @@ export function celebrate({
 }): void {
   if (prefersReducedMotion) return;
   const origin = centreOf(target, frame);
-  fire({ origin, particleCount: 120, spread: 100, startVelocity: 55 });
-  fire({ origin, particleCount: 80, spread: 360, startVelocity: 40 });
+  fire({ ...FOUNTAIN, origin });
+  fire({ ...RING, origin });
 }
