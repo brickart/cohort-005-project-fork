@@ -34,11 +34,17 @@ export type SaveResponse = { ok: boolean; error?: string } | undefined;
  * "Saved" lasts only until the Student edits the draft again; after that the
  * page no longer holds what the server stored.
  */
-export function describeSave(
-  submitting: boolean,
-  response: SaveResponse,
-  editedSinceSave: boolean
-): SaveStatus {
+export type SaveState = {
+  submitting: boolean;
+  response: SaveResponse;
+  editedSinceSave: boolean;
+};
+
+export function describeSave({
+  submitting,
+  response,
+  editedSinceSave,
+}: SaveState): SaveStatus {
   if (submitting) return { kind: "saving" };
   if (!response || editedSinceSave) return { kind: "idle" };
   if (response.ok) return { kind: "saved" };

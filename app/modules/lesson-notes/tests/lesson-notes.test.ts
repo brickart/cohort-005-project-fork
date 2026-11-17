@@ -48,36 +48,76 @@ describe("noteDraft", () => {
 
 describe("noteSaveStatus", () => {
   it("is idle before anything is saved", () => {
-    expect(noteSaveStatus(false, undefined, false)).toEqual({ kind: "idle" });
+    expect(
+      noteSaveStatus({
+        submitting: false,
+        response: undefined,
+        editedSinceSave: false,
+      })
+    ).toEqual({ kind: "idle" });
   });
 
   it("is saving while the request is in flight, whatever came before", () => {
-    expect(noteSaveStatus(true, undefined, false)).toEqual({ kind: "saving" });
-    expect(noteSaveStatus(true, { ok: true }, true)).toEqual({
+    expect(
+      noteSaveStatus({
+        submitting: true,
+        response: undefined,
+        editedSinceSave: false,
+      })
+    ).toEqual({ kind: "saving" });
+    expect(
+      noteSaveStatus({
+        submitting: true,
+        response: { ok: true },
+        editedSinceSave: true,
+      })
+    ).toEqual({
       kind: "saving",
     });
   });
 
   it("is saved after the server accepts the note", () => {
-    expect(noteSaveStatus(false, { ok: true }, false)).toEqual({
+    expect(
+      noteSaveStatus({
+        submitting: false,
+        response: { ok: true },
+        editedSinceSave: false,
+      })
+    ).toEqual({
       kind: "saved",
     });
   });
 
   it("stops saying saved once the Student edits again", () => {
-    expect(noteSaveStatus(false, { ok: true }, true)).toEqual({
+    expect(
+      noteSaveStatus({
+        submitting: false,
+        response: { ok: true },
+        editedSinceSave: true,
+      })
+    ).toEqual({
       kind: "idle",
     });
   });
 
   it("shows the server's error", () => {
     expect(
-      noteSaveStatus(false, { ok: false, error: "Too long" }, false)
+      noteSaveStatus({
+        submitting: false,
+        response: { ok: false, error: "Too long" },
+        editedSinceSave: false,
+      })
     ).toEqual({ kind: "error", message: "Too long" });
   });
 
   it("falls back to a generic error when the server gives none", () => {
-    expect(noteSaveStatus(false, { ok: false }, false)).toEqual({
+    expect(
+      noteSaveStatus({
+        submitting: false,
+        response: { ok: false },
+        editedSinceSave: false,
+      })
+    ).toEqual({
       kind: "error",
       message: "Your note was not saved. Try again.",
     });
@@ -85,7 +125,11 @@ describe("noteSaveStatus", () => {
 
   it("clears an error once the Student edits again", () => {
     expect(
-      noteSaveStatus(false, { ok: false, error: "Too long" }, true)
+      noteSaveStatus({
+        submitting: false,
+        response: { ok: false, error: "Too long" },
+        editedSinceSave: true,
+      })
     ).toEqual({ kind: "idle" });
   });
 });

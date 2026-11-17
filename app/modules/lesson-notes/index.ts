@@ -3,10 +3,11 @@ import {
   describeSave,
   type NoteDraft,
   type SaveResponse,
+  type SaveState,
   type SaveStatus,
 } from "./lib/draft";
 
-export type { NoteDraft, SaveResponse, SaveStatus };
+export type { NoteDraft, SaveResponse, SaveState, SaveStatus };
 
 /**
  * What the Lesson page's Note editor shows. The server
@@ -18,10 +19,6 @@ export function noteDraft(body: string): NoteDraft {
 }
 
 /** The line beside the Save button: saving, saved, or why it failed. */
-export function noteSaveStatus(
-  submitting: boolean,
-  response: SaveResponse,
-  editedSinceSave: boolean
-): SaveStatus {
-  return describeSave(submitting, response, editedSinceSave);
+export function noteSaveStatus(state: SaveState): SaveStatus {
+  return describeSave(state);
 }

@@ -27,11 +27,11 @@ export function LessonNote({ note }: { note: LessonNoteData }) {
   const [submittedBody, setSubmittedBody] = useState<string | null>(null);
 
   const draft = noteDraft(body);
-  const status = noteSaveStatus(
-    fetcher.state !== "idle",
-    fetcher.data,
-    body !== submittedBody
-  );
+  const status = noteSaveStatus({
+    submitting: fetcher.state !== "idle",
+    response: fetcher.data,
+    editedSinceSave: body !== submittedBody,
+  });
 
   return (
     <Card className="mb-8">
