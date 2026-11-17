@@ -6,6 +6,12 @@ open any code. Build the ticket, and only the ticket.
 
 Read CODING_STANDARDS.md.
 
+Before you edit, run `node scripts/check-file-tokens.js <every file you plan
+to change>`. The pre-commit hook rejects any staged file over the limit, and
+several files on `main` already are. Split each one it lists first, as its
+own move-only commit (see "A move is its own commit" in the standards), then
+build the ticket on top.
+
 - Behaviour goes in a deep module under app/modules/, behind an entry point a
   test can call, never inline in a loader.
 - Ship tests with the code. End with more passing tests than you started

@@ -18,6 +18,31 @@ Start the app with `npm run dev` first. The examples below use
 `http://localhost:5173`, the dev server's default address — if `npm run dev`
 printed a different one, use that.
 
+In the factory workflows the dev server is already running when you start,
+with its output in `/tmp/dev.log`. Read that log for server errors. If an
+edit leaves the server broken, restart it the same way:
+`pkill -f "react-router dev"; nohup npm run dev > /tmp/dev.log 2>&1 &`.
+
+## Acting as a user
+
+Most pages need someone signed in. POST the user's id to `/api/switch-user`
+from inside the page, and the session cookie sticks for the rest of the
+browser session:
+
+```bash
+ID=$(sqlite3 data.db "select id from users where name = 'Emma Wilson'")
+agent-browser open http://localhost:5173/
+agent-browser eval "fetch('/api/switch-user', {method: 'POST', body: new URLSearchParams({userId: '$ID'})}).then(r => r.status)"
+```
+
+On the seeded database, Emma Wilson is a Student enrolled in
+`introduction-to-typescript`, so `/courses/introduction-to-typescript/lessons/3`
+shows the full lesson. For anyone else, ask the database:
+`sqlite3 data.db "select id, name, role from users"`, and `enrollments` for
+who owns which course.
+
+## Reading the page
+
 A screenshot is pixels. To verify a fix you need a yes or a no, so read the
 DOM:
 
