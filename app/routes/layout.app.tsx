@@ -8,6 +8,7 @@ import {
   tolerateNotificationFailure,
 } from "~/lib/notifications.server";
 import { Toaster } from "sonner";
+import { useTheme } from "~/modules/theme";
 import { getCurrentUserId, getDevCountry } from "~/lib/session";
 import { getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
 import { eq, and, or, sql, desc } from "drizzle-orm";
@@ -248,6 +249,7 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
     isTeamAdmin: userIsTeamAdmin,
     notificationFeed,
   } = loaderData;
+  const theme = useTheme();
 
   return (
     <NotificationFeedProvider credentials={notificationFeed}>
@@ -267,7 +269,7 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
           countryTierInfo={countryTierInfo}
           countries={countries}
         />
-        <Toaster position="bottom-right" richColors closeButton />
+        <Toaster theme={theme} position="bottom-right" richColors closeButton />
       </div>
     </NotificationFeedProvider>
   );
