@@ -1,12 +1,13 @@
 import { useSyncExternalStore } from "react";
 import {
   readDocumentTheme,
+  setDocumentTheme,
   subscribeToDocumentTheme,
   type Theme,
 } from "./lib/theme";
 
 export type { Theme };
-export { readDocumentTheme, subscribeToDocumentTheme };
+export { readDocumentTheme, setDocumentTheme, subscribeToDocumentTheme };
 
 // The server cannot read localStorage, so it renders light; the inline
 // script in root.tsx adds `.dark` before hydration and the store catches up.
@@ -16,7 +17,7 @@ function serverTheme(): Theme {
 
 /**
  * The app's theme, following the `.dark` class on `<html>` live, so a
- * toggle anywhere (the Sidebar, the home page) reaches every caller.
+ * toggle anywhere reaches every caller.
  */
 export function useTheme(): Theme {
   return useSyncExternalStore(

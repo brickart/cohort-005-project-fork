@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import {
   readDocumentTheme,
+  setDocumentTheme,
   subscribeToDocumentTheme,
   useTheme,
 } from "../index";
@@ -25,7 +26,14 @@ class FakeObserver {
 function stubDocument(...classes: string[]) {
   const set = new Set(classes);
   const documentElement = {
-    classList: { contains: (c: string) => set.has(c) },
+    classList: {
+      contains: (c: string) => set.has(c),
+      toggle: (c: string, force: boolean) => {
+        if (force) set.add(c);
+        else set.delete(c);
+        return force;
+      },
+    },
   };
   vi.stubGlobal("document", { documentElement });
   vi.stubGlobal("MutationObserver", FakeObserver);
@@ -74,6 +82,43 @@ describe("subscribeToDocumentTheme", () => {
     expect(FakeObserver.last?.disconnected).toBe(false);
     unsubscribe();
     expect(FakeObserver.last?.disconnected).toBe(true);
+  });
+});
+
+function stubStorage() {
+  const saved = new Map<string, string>();
+  vi.stubGlobal("localStorage", {
+    setItem: (key: string, value: string) => saved.set(key, value),
+  });
+  return saved;
+}
+
+describe("setDocumentTheme", () => {
+  it("switches <html> to dark and remembers it for the next load", () => {
+    stubDocument();
+    const saved = stubStorage();
+    setDocumentTheme("dark");
+    expect(readDocumentTheme()).toBe("dark");
+    expect(saved.get("cadence-theme")).toBe("dark");
+  });
+
+  it("switches <html> back to light and remembers it", () => {
+    stubDocument("dark");
+    const saved = stubStorage();
+    setDocumentTheme("light");
+    expect(readDocumentTheme()).toBe("light");
+    expect(saved.get("cadence-theme")).toBe("light");
+  });
+
+  it("still switches the theme when storage is unavailable", () => {
+    stubDocument();
+    vi.stubGlobal("localStorage", {
+      setItem: () => {
+        throw new Error("blocked");
+      },
+    });
+    setDocumentTheme("dark");
+    expect(readDocumentTheme()).toBe("dark");
   });
 });
 

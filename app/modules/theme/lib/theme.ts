@@ -12,3 +12,13 @@ export function subscribeToDocumentTheme(onChange: () => void): () => void {
   });
   return () => observer.disconnect();
 }
+
+// Must match the key the inline script in root.tsx reads before hydration.
+const STORAGE_KEY = "cadence-theme";
+
+export function setDocumentTheme(theme: Theme): void {
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+  } catch {}
+}
