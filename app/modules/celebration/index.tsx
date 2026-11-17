@@ -6,11 +6,9 @@ export { celebrate, centreOf };
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
-/**
- * Centres `children` in the content area and bursts confetti from behind
- * them on every mount. The confetti draws on a canvas of its own beneath
- * the children, so it never covers the card or the sidebar.
- */
+// The confetti gets a canvas of its own beneath the children, rather than
+// canvas-confetti's default full-window one, so it never covers the card or
+// the sidebar.
 export function ConfettiStage({ children }: { children: ReactNode }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const targetRef = useRef<HTMLDivElement>(null);
