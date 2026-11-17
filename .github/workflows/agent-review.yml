@@ -4,7 +4,9 @@ name: Agent — Review A Pull Request
 # built.
 #
 # WHAT TRIGGERS IT
-#   Someone puts the `agent:review` label on a pull request.
+#   Someone puts the `agent:review` label on a pull request. agent.yml
+#   receives the label event and calls this file; it also holds this
+#   workflow's concurrency group (one review per PR, never cancelled).
 #
 # THE POINT OF THIS FILE: IT IS MEMORY-LESS
 #   This workflow shares nothing with the implementer run. No session, no
@@ -52,7 +54,8 @@ name: Agent — Review A Pull Request
 #     environment is tidiness, not a wall: the agent shares the machine with
 #     the steps that push and post. The real defence is who can reach the
 #     agent — same-repo PRs only, and a label only a collaborator can apply.
-#   secrets.GITHUB_TOKEN — supplied by Actions, used only for the checkout.
+#   secrets.GITHUB_TOKEN — supplied by Actions, used for the checkout and for
+#     `agent:in-progress` in the `claim` job.
 #   The `agent:review` label. A fresh clone of this repository does not have
 #     it, and no workflow can create the label that starts it. Create it once:
 #       gh label create "agent:review" --color 5319E7 \
@@ -66,26 +69,45 @@ name: Agent — Review A Pull Request
 #   with a writable token is how a factory gets robbed.
 
 on:
-  pull_request:
-    types: [labeled]
+  workflow_call:
 
-# A ceiling on the GITHUB_TOKEN, which only checks the code out. Reading the
-# PR and the ticket, pushing the fixes, posting the verdict and the inline
+# A ceiling on the GITHUB_TOKEN, which checks the code out and, in the
+# `claim` job, applies `agent:in-progress` (a label applied with GITHUB_TOKEN
+# starts no workflow, so it adds no run to the Actions list). Reading the PR
+# and the ticket, pushing the fixes, posting the verdict and the inline
 # comments, and marking the PR ready all go through FACTORY_PAT.
 permissions:
   contents: read # the checkout
 
-# One review per PR, never cancelled: a cancelled review would lose the
-# commits it made. A fresh `agent:review` waits for the one running. Only
-# that label joins the group: every other label gets a throwaway group of its
-# own, so labelling a PR under review `bug` queues nothing.
-concurrency:
-  group: ${{ github.event.label.name == 'agent:review' && format('agent-review-{0}', github.event.pull_request.number) || format('ignore-{0}', github.run_id) }}
-  cancel-in-progress: false
-
 jobs:
+  # Its own job so the GITHUB_TOKEN that can write labels never shares a job
+  # with the agent.
+  claim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Transition labels
+        # The trigger comes off, so putting it back on is how you retry.
+        # `agent:in-progress` goes on until the run ends, however it ends.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # A fresh clone of this repository does not have these labels yet.
+          gh label create "agent:in-progress" --color FBCA04 \
+            --description "An agent is working on this right now" || true
+          gh label create "agent:blocked" --color B60205 \
+            --description "An agent run failed here. Its comment says how to retry" || true
+          gh pr edit "$PR_NUMBER" --remove-label "agent:review" || true
+          gh pr edit "$PR_NUMBER" --remove-label "agent:blocked" || true
+          gh pr edit "$PR_NUMBER" --add-label "agent:in-progress"
+
   review:
-    if: github.event.label.name == 'agent:review'
+    needs: claim
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -100,21 +122,6 @@ jobs:
       RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     steps:
-      - name: Transition labels
-        # The trigger comes off, so putting it back on is how you retry.
-        # `agent:in-progress` goes on until the run ends, however it ends.
-        env:
-          GH_TOKEN: ${{ secrets.FACTORY_PAT }}
-        run: |
-          # A fresh clone of this repository does not have these labels yet.
-          gh label create "agent:in-progress" --color FBCA04 \
-            --description "An agent is working on this right now" || true
-          gh label create "agent:blocked" --color B60205 \
-            --description "An agent run failed here. Its comment says how to retry" || true
-          gh pr edit "$PR_NUMBER" --remove-label "agent:review" || true
-          gh pr edit "$PR_NUMBER" --remove-label "agent:blocked" || true
-          gh pr edit "$PR_NUMBER" --add-label "agent:in-progress"
-
       - name: Checkout the pull request
         uses: actions/checkout@v4
         with:

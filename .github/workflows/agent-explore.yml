@@ -5,7 +5,9 @@ name: Agent — Explore The Tickets
 # WHAT TRIGGERS IT
 #   Someone puts the `agent:explore` label on an issue. The run then ignores
 #   which issue that was. It explores EVERY open issue labelled
-#   `agent:explore`, together, as one batch.
+#   `agent:explore`, together, as one batch. agent.yml receives the label
+#   event and calls this file; it also holds this workflow's concurrency group
+#   (one batch at a time, never cancelled).
 #
 # WHY A BATCH
 #   Tickets arrive in clumps, and a clump has duplicates in it: the same bug
@@ -19,17 +21,18 @@ name: Agent — Explore The Tickets
 #   back a plan: one entry per ticket, with the comment to post on it. It does
 #   not edit a file, open a branch or open a pull request.
 #
-#   It does not even post its own comments. There are two jobs:
+#   It does not even post its own comments. There are four jobs:
 #
+#     claim     runs no agent. It lists the batch and marks it in progress.
 #     explore   runs the agent. The agent holds no GitHub token at all.
 #     apply     runs no agent. It checks the plan, and only then writes.
+#     finish    runs no agent. It tidies the labels, however the run ended.
 #
 #   Read where FACTORY_PAT goes before you read anything else. It is the
 #   enforcement, not the description. The prompt asks the agent to stay
-#   read-only. In the explore job the PAT goes to one step, the one that
-#   lists the batch, and that step runs before the agent exists and runs
-#   nothing but `gh` and `jq`. The job's own GITHUB_TOKEN can read the code
-#   and nothing else. So the agent has nothing to write with.
+#   read-only. The explore job never gets the PAT: claim lists the batch and
+#   hands it over as an artifact. The explore job's own GITHUB_TOKEN can read
+#   the code and nothing else. So the agent has nothing to write with.
 #
 # WHY EXPLORE BEFORE YOU COMMIT
 #   A ticket that looks like twenty minutes and is actually a schema change
@@ -46,7 +49,8 @@ name: Agent — Explore The Tickets
 #
 # THE LABELS WHILE IT RUNS
 #   When the batch is listed, each issue swaps `agent:explore` for
-#   `agent:in-progress`. Apply takes `agent:in-progress` off once the issue
+#   `agent:in-progress`, applied with GITHUB_TOKEN so it starts no workflow
+#   and adds no run to the Actions list. Apply takes `agent:in-progress` off once the issue
 #   has its comment. If the run fails, the `finish` job marks every issue
 #   still in progress `agent:blocked`; re-add `agent:explore` to retry.
 #
@@ -57,58 +61,40 @@ name: Agent — Explore The Tickets
 # WHAT IT NEEDS
 #   secrets.CLAUDE_CODE_OAUTH_TOKEN — the agent's auth token.
 #   secrets.FACTORY_PAT — a fine-grained personal access token on this
-#     repository. Every call this workflow makes to GitHub uses it: listing
-#     the batch, posting the findings, moving the labels, closing duplicates.
-#     The rest of the factory needs it anyway, so explore uses the same one.
-#   secrets.GITHUB_TOKEN — supplied by Actions, and used only to check the
-#     code out. Scoped per job below.
+#     repository. Posting the findings, marking issues blocked and closing
+#     duplicates use it. The rest of the factory needs it anyway, so explore
+#     uses the same one.
+#   secrets.GITHUB_TOKEN — supplied by Actions. It checks the code out, and
+#     in the claim job lists the batch and applies `agent:in-progress`.
+#     Scoped per job below.
 #   The `agent:explore` label. A fresh clone of this repository does not have
 #     it, and no workflow can create the label that starts it. Create it once:
 #       gh label create "agent:explore" --color 5319E7 \
 #         --description "The factory explores this ticket"
 
 on:
-  issues:
-    types: [labeled]
-
-# One batch at a time, and never cancelled. A label that lands mid-run queues
-# one more run behind this one, and that run lists the batch again when it
-# starts. The issues this run took are `agent:in-progress` by then, so that
-# batch is only what was labelled mid-run, and nothing is lost. Every other
-# label gets a throwaway group of its own, so it can never bump that queued run.
-concurrency:
-  group: ${{ github.event.label.name == 'agent:explore' && 'agent-explore' || format('ignore-{0}', github.run_id) }}
-  cancel-in-progress: false
+  workflow_call:
 
 jobs:
-  explore:
-    if: github.event.label.name == 'agent:explore'
+  # Lists the batch and claims it. Its own job so the GITHUB_TOKEN that can
+  # write labels never shares a job with the agent.
+  claim:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 5
 
     permissions:
-      contents: read # the checkout. The tickets are read with FACTORY_PAT.
+      issues: write
 
-    # The batch it was given, and the plan it came back with. The apply job
-    # reads both.
     outputs:
       batch: ${{ steps.batch.outputs.numbers }}
-      plan: ${{ steps.plan.outputs.json }}
 
     env:
+      GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
       - name: List the batch
         id: batch
-        env:
-          # The PAT, before the agent exists. Nothing after this step gets it.
-          GH_TOKEN: ${{ secrets.FACTORY_PAT }}
         run: |
           set -euo pipefail
           # Labels often go on several at once. Let them all land.
@@ -147,23 +133,51 @@ jobs:
             gh issue edit "$n" --add-label "agent:in-progress"
           done
 
-      - name: Setup Node.js 22
+      - name: Hand the batch to the explore job
         if: steps.batch.outputs.numbers != '[]'
+        uses: actions/upload-artifact@v4
+        with:
+          name: explore-batch
+          path: /tmp/explore/issues.json
+
+  explore:
+    needs: claim
+    if: needs.claim.outputs.batch != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    permissions:
+      contents: read # the checkout. The batch comes from the claim job.
+
+    # The plan it came back with. The apply job reads it.
+    outputs:
+      plan: ${{ steps.plan.outputs.json }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Take the batch from the claim job
+        uses: actions/download-artifact@v4
+        with:
+          name: explore-batch
+          path: /tmp/explore
+
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
 
       - name: Install dependencies
-        if: steps.batch.outputs.numbers != '[]'
         run: npm ci
 
       - name: Install Claude Code
-        if: steps.batch.outputs.numbers != '[]'
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Explore
-        if: steps.batch.outputs.numbers != '[]'
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           OUTPUT_DIR: ${{ runner.temp }}
@@ -173,13 +187,11 @@ jobs:
 
       - name: Hand the plan to the apply job
         id: plan
-        if: steps.batch.outputs.numbers != '[]'
         run: |
           set -euo pipefail
           echo "json=$(jq -c . "$RUNNER_TEMP/plan.json")" >> "$GITHUB_OUTPUT"
 
       - name: Hand the screenshots to the apply job
-        if: steps.batch.outputs.numbers != '[]'
         uses: actions/upload-artifact@v4
         with:
           name: explore-evidence
@@ -187,8 +199,7 @@ jobs:
           if-no-files-found: ignore
 
   apply:
-    needs: explore
-    if: needs.explore.outputs.batch != '[]'
+    needs: [claim, explore]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -218,7 +229,7 @@ jobs:
           # Through env, never pasted into the script. A `${{ }}` inside
           # `run:` is text bash runs, and the plan was written by an agent
           # that has just read a pile of untrusted issues.
-          BATCH: ${{ needs.explore.outputs.batch }}
+          BATCH: ${{ needs.claim.outputs.batch }}
           PLAN: ${{ needs.explore.outputs.plan }}
         run: |
           set -euo pipefail
@@ -289,11 +300,11 @@ jobs:
             fi
           done
 
-  # The two jobs above are one run, so the run's end is here: the same two
-  # label steps that close every other agent workflow, over the whole batch.
+  # The jobs above are one run, so the run's end is here: the same two label
+  # steps that close every other agent workflow, over the whole batch.
   finish:
-    needs: [explore, apply]
-    if: always() && needs.explore.outputs.batch != '' && needs.explore.outputs.batch != '[]'
+    needs: [claim, explore, apply]
+    if: always() && needs.claim.outputs.batch != '' && needs.claim.outputs.batch != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -303,7 +314,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.FACTORY_PAT }}
       GH_REPO: ${{ github.repository }}
-      BATCH: ${{ needs.explore.outputs.batch }}
+      BATCH: ${{ needs.claim.outputs.batch }}
       RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     steps:

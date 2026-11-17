@@ -89,20 +89,21 @@ name: Agent — Implement A Spec
 #                               Once a PAT has to be in the room, every other
 #                               call may as well be the same PAT.
 #   secrets.GITHUB_TOKEN      — supplied by Actions, and used for the checkout
-#                               and nothing else. `permissions:` shrinks it to
-#                               match.
+#                               and for `agent:in-progress` in the `claim`
+#                               job. `permissions:` shrinks it to match.
 #   The `agent:implement-spec` label. A fresh clone of this repository does
 #     not have it, and no workflow can create the label that starts it. Create
-#     it once (the cron and the button need no label):
+#     it once (the cron and the button need no label). agent.yml receives the
+#     label event and dispatches this workflow with the spec's number:
 #       gh label create "agent:implement-spec" --color 5319E7 \
 #         --description "Work this spec through the implement-spec queue"
 # ═══════════════════════════════════════════════════════════════════════════
 
 on:
-  # 1. A person opens the queue by labelling the spec issue.
-  issues:
-    types: [labeled]
-
+  # 1. A person opens the queue by labelling the spec issue. That label event
+  #    goes to agent.yml, which dispatches this workflow (trigger 3) with the
+  #    spec's number. No `issues:` trigger here: every label on every issue
+  #    would start a run of this file, almost all of them skipped.
   # 2. The clock. Every fifteen minutes it looks at the queue and moves it on
   #    one ticket, whether or not anyone asked. This is the trigger that makes
   #    the factory a thing that runs rather than a thing you run: the queue
@@ -127,8 +128,9 @@ on:
         required: false
         type: string
 
-# A ceiling on the GITHUB_TOKEN, which now only checks the code out. Pushing,
-# labelling, commenting and dispatching all go through FACTORY_PAT.
+# A ceiling on the GITHUB_TOKEN, which checks the code out and, in the `claim`
+# job, applies `agent:in-progress`. Pushing, the other labels, commenting and
+# dispatching all go through FACTORY_PAT.
 permissions:
   contents: read # the checkout
 
@@ -136,16 +138,8 @@ permissions:
 # is shared state: two runs at once would both pick the same frontier ticket
 # and build it twice. `cancel-in-progress: false` matters just as much — a
 # cron tick must not kill a build that is halfway through.
-#
-# Only the runs that can do something join that group. Every label on every
-# issue starts this workflow, and the factory's own labels do too now that
-# FACTORY_PAT applies them (`agent:in-progress` when it claims a ticket,
-# `agent:blocked` when it parks one). A group holds one running run and one
-# waiting run, and a newcomer replaces the one waiting — so those label runs,
-# left in the group, could bump the chain's next run out of the queue. Every
-# other label gets a throwaway group of its own, and is skipped for free.
 concurrency:
-  group: ${{ (github.event_name != 'issues' || github.event.label.name == 'agent:implement-spec') && 'agent-implement-spec' || format('ignore-{0}', github.run_id) }}
+  group: agent-implement-spec
   cancel-in-progress: false
 
 jobs:
@@ -154,11 +148,6 @@ jobs:
   # consequence — just `gh` and `jq`, so it is cheap enough to run every
   # fifteen minutes forever.
   survey:
-    # Label runs are filtered here; cron and dispatch runs carry no label and
-    # fall through.
-    if: >-
-      github.event_name != 'issues' ||
-      github.event.label.name == 'agent:implement-spec'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -174,8 +163,8 @@ jobs:
       # nothing else — no checkout, no agent.
       GH_TOKEN: ${{ secrets.FACTORY_PAT }}
       GH_REPO: ${{ github.repository }}
-      # Whichever of the three triggers fired, the spec number ends up here.
-      REQUESTED_SPEC: ${{ github.event.issue.number || inputs.spec_issue }}
+      # A label or the chain names the spec; a cron tick leaves this blank.
+      REQUESTED_SPEC: ${{ inputs.spec_issue }}
 
     steps:
       - name: Find the spec and the frontier ticket
@@ -380,8 +369,44 @@ jobs:
   # Like agent-implement.yml, every run pushes to a branch of its own: the run
   # id is in the name. A parked ticket that a person puts back in the queue is
   # built on a new branch, not pushed onto the one the failed run left.
-  implement:
+  # Moving the label first is what stops a cron tick that lands during a long
+  # build from picking the same ticket up again. Its own job, with
+  # GITHUB_TOKEN, so `agent:in-progress` starts no workflow and adds no run to
+  # the Actions list, and the token that can write labels never shares a job
+  # with the agent.
+  claim:
     needs: survey
+    if: needs.survey.outputs.mode == 'implement'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      issues: write
+
+    env:
+      GH_REPO: ${{ github.repository }}
+      TICKET: ${{ needs.survey.outputs.ticket }}
+      RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: Claim the ticket
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh label create "agent:in-progress" --color FBCA04 \
+            --description "An agent is working on this right now" || true
+          gh issue edit "$TICKET" \
+            --remove-label "agent:queued" \
+            --add-label "agent:in-progress"
+
+      - name: Say so on the ticket
+        env:
+          GH_TOKEN: ${{ secrets.FACTORY_PAT }}
+        run: gh issue comment "$TICKET" --body "Building — [logs](${RUN_URL}). <!-- factory:status -->"
+
+  implement:
+    needs: [survey, claim]
     if: needs.survey.outputs.mode == 'implement'
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -416,20 +441,6 @@ jobs:
         run: |
           npm run db:migrate
           npm run db:seed
-
-      - name: Claim the ticket
-        # Moving the label first is what stops a cron tick that lands during a
-        # long build from picking the same ticket up again.
-        env:
-          GH_TOKEN: ${{ secrets.FACTORY_PAT }}
-        run: |
-          set -euo pipefail
-          gh label create "agent:in-progress" --color FBCA04 \
-            --description "An agent is working on this right now" || true
-          gh issue edit "$TICKET" \
-            --remove-label "agent:queued" \
-            --add-label "agent:in-progress"
-          gh issue comment "$TICKET" --body "Building — [logs](${RUN_URL}). <!-- factory:status -->"
 
       - name: Read the ticket and its spec
         env:
@@ -581,7 +592,7 @@ jobs:
         if: steps.ship.outputs.shipped == 'true'
         env:
           # The other hop that made FACTORY_PAT necessary, and the line the
-          # whole chain ends on. agent-review.yml triggers on `pull_request: [labeled]`, and
+          # whole chain ends on. agent.yml starts the review on `pull_request: [labeled]`, and
           # a label applied with the built-in token does not fire a workflow —
           # GitHub suppresses that so a workflow cannot trigger itself. With
           # GITHUB_TOKEN the label lands, the run goes green, and the reviewer
@@ -644,11 +655,17 @@ jobs:
   # `survey` skips a parked ticket, so the next run moves on to a different one
   # instead of rebuilding the failure. Without that filter this `always()` would
   # be an infinite retry of the same broken ticket, with a cron on top of it.
+  #
+  # A failed `claim` is the one failure that parks nothing: the ticket never
+  # reached `implement`, so nothing labelled it `agent:blocked`. Re-dispatching
+  # would pick the same ticket at once, so the chain stops and leaves it to
+  # the next cron tick.
   chain:
-    needs: [survey, decompose, implement]
+    needs: [survey, decompose, claim, implement]
     if: |
       always() &&
       needs.survey.result == 'success' &&
+      needs.claim.result != 'failure' &&
       contains(fromJSON('["decompose", "implement"]'), needs.survey.outputs.mode)
     runs-on: ubuntu-latest
     timeout-minutes: 5
