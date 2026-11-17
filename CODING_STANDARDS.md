@@ -42,9 +42,22 @@ Test setup calls the module's own functions. When the function you need does
 not exist, add it to the module rather than inserting rows directly, so a
 change to how the module stores its data leaves its tests alone.
 
+The exception is a table no module writes, such as modules, lessons and
+quizzes, which only the seed fills. Insert those rows directly, in a fixture
+helper in the test file, as `instructor-analytics` does.
+
 ## Keep files under 5000 tokens
 
 Keep every file under 5000 tokens.
+
+## A move is its own commit
+
+Code that moves to another file moves in a commit of its own, before the
+feature that needed the room, and comes out the other side doing exactly what
+it did. When the move has to change behaviour (a new `key`, a renamed
+export), the commit message names each change. A reviewer reads a move
+commit for what changed, and a 1,400-line move with a restyle inside it hides
+the restyle.
 
 ## Wrap related writes in a transaction
 
