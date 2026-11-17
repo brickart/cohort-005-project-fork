@@ -16,9 +16,10 @@ import {
 export type LessonNoteData = { body: string; updatedAt: string } | null;
 
 /**
- * The Student's private Note on a Lesson. It mirrors the Discussion card's
- * layout but stays visibly separate from it: a Note is addressed to nobody,
- * and a private thought typed into the public box cannot be taken back.
+ * The Student's private Note on a Lesson. It sits directly above the
+ * Discussion card and mirrors its layout, but stays a separate card with a
+ * privacy badge: a Note is addressed to nobody, and a private thought typed
+ * into the public box cannot be taken back.
  */
 export function LessonNote({ note }: { note: LessonNoteData }) {
   const fetcher = useFetcher<SaveResponse>();
