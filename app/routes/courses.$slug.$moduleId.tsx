@@ -27,6 +27,8 @@ import {
   Video,
 } from "lucide-react";
 import { data, isRouteErrorResponse } from "react-router";
+import { z } from "zod";
+import { parseParams } from "~/lib/validation";
 import { formatDuration } from "~/lib/utils";
 
 function getCourseWithDetails(id: number) {
@@ -135,7 +137,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: `${moduleTitle} — ${courseTitle} — Cadence` }];
 }
 
+const moduleParamsSchema = z.object({
+  moduleId: z.coerce.number().int().positive(),
+});
+
 export async function loader({ params, request }: Route.LoaderArgs) {
+  const { moduleId } = parseParams(params, moduleParamsSchema, {
+    notFound: "Module not found",
+  });
   // Public page: signed-out visitors and people without an Enrollment still
   // see it. Not found covers an unknown course, a malformed module id and a
   // module from another course.
@@ -155,7 +164,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw data("Course not found", { status: 404 });
   }
 
-  const moduleWithLessons = getModuleWithLessons(Number(params.moduleId));
+  const moduleWithLessons = getModuleWithLessons(moduleId);
   if (!moduleWithLessons) {
     throw data("Module not found", { status: 404 });
   }

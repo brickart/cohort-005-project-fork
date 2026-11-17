@@ -19,6 +19,8 @@ import {
   Video,
 } from "lucide-react";
 import { data, isRouteErrorResponse } from "react-router";
+import { z } from "zod";
+import { parseParams } from "~/lib/validation";
 import { formatDuration } from "~/lib/utils";
 
 function getCourseWithDetails(id: number) {
@@ -98,7 +100,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: `Preview: ${moduleTitle} — ${courseTitle} — Cadence` }];
 }
 
+const moduleParamsSchema = z.object({
+  moduleId: z.coerce.number().int().positive(),
+});
+
 export async function loader({ params, request }: Route.LoaderArgs) {
+  const { moduleId } = parseParams(params, moduleParamsSchema, {
+    notFound: "Module not found.",
+  });
   const { course } = await coursePermissions.requireCapability(
     request,
     "manage",
@@ -107,7 +116,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   // requireCapability has checked this is a module in the course.
   const courseWithDetails = getCourseWithDetails(course.id);
-  const moduleWithLessons = getModuleWithLessons(Number(params.moduleId));
+  const moduleWithLessons = getModuleWithLessons(moduleId);
   if (!courseWithDetails || !moduleWithLessons) {
     throw data("Module not found.", { status: 404 });
   }

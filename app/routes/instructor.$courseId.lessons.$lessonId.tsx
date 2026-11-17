@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData } from "~/lib/validation";
+import { parseFormData, parseParams } from "~/lib/validation";
 
 const updateLessonSchema = z.object({
   intent: z.literal("update-lesson"),
@@ -88,13 +88,20 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
+const lessonParamsSchema = z.object({
+  lessonId: z.coerce.number().int().positive(),
+});
+
 export async function loader({ params, request }: Route.LoaderArgs) {
+  const { lessonId: paramLessonId } = parseParams(params, lessonParamsSchema, {
+    notFound: "Lesson not found.",
+  });
   const { course } = await coursePermissions.requireCapability(
     request,
     "manage",
     { courseId: params.courseId, lessonId: params.lessonId }
   );
-  const { lesson, module: mod } = getLessonWithModule(Number(params.lessonId));
+  const { lesson, module: mod } = getLessonWithModule(paramLessonId);
   const lessonId = lesson.id;
 
   const quiz = getQuizByLessonId(lessonId);
@@ -103,12 +110,13 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
+  const { lessonId } = parseParams(params, lessonParamsSchema, {
+    notFound: "Lesson not found.",
+  });
   await coursePermissions.requireCapability(request, "manage", {
     courseId: params.courseId,
     lessonId: params.lessonId,
   });
-  // requireCapability has checked this is a lesson in the course.
-  const lessonId = Number(params.lessonId);
 
   const formData = await request.formData();
   const parsed = parseFormData(formData, updateLessonSchema);

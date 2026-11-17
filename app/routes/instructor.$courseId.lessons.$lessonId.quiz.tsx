@@ -28,7 +28,7 @@ import {
 } from "~/components/quiz-wizard/wizard-state";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData } from "~/lib/validation";
+import { parseFormData, parseParams } from "~/lib/validation";
 
 const wizardDataSchema = z.object({
   title: z.string().trim().min(1, "Quiz title is required."),
@@ -75,14 +75,21 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 // ─── Loader ───
 
+const lessonParamsSchema = z.object({
+  lessonId: z.coerce.number().int().positive(),
+});
+
 export async function loader({ params, request }: Route.LoaderArgs) {
+  const { lessonId: paramLessonId } = parseParams(params, lessonParamsSchema, {
+    notFound: "Lesson not found.",
+  });
   const { course } = await coursePermissions.requireCapability(
     request,
     "manage",
     { courseId: params.courseId, lessonId: params.lessonId }
   );
   // requireCapability has checked this is a lesson in the course.
-  const lesson = getLessonById(Number(params.lessonId));
+  const lesson = getLessonById(paramLessonId);
   const mod = lesson && getModuleById(lesson.moduleId);
   if (!lesson || !mod) {
     throw data("Lesson not found.", { status: 404 });
@@ -101,12 +108,13 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 // ─── Action ───
 
 export async function action({ params, request }: Route.ActionArgs) {
+  const { lessonId } = parseParams(params, lessonParamsSchema, {
+    notFound: "Lesson not found.",
+  });
   await coursePermissions.requireCapability(request, "manage", {
     courseId: params.courseId,
     lessonId: params.lessonId,
   });
-  // requireCapability has checked this is a lesson in the course.
-  const lessonId = Number(params.lessonId);
 
   const formData = await request.formData();
   const parsed = parseFormData(formData, quizActionSchema);

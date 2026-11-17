@@ -37,10 +37,13 @@ export function parseFormData<T extends z.ZodType>(
 /**
  * Validates route params with a Zod schema.
  * Throws a 400 response on failure (params are never user-correctable form errors).
+ * Pass `notFound` to throw a 404 with that message instead, for a route that
+ * treats a malformed id like a missing row.
  */
 export function parseParams<T extends z.ZodType>(
   params: Record<string, string | undefined>,
-  schema: T
+  schema: T,
+  { notFound }: { notFound?: string } = {}
 ): z.infer<T> {
   const result = schema.safeParse(params);
 
@@ -48,6 +51,7 @@ export function parseParams<T extends z.ZodType>(
     return result.data;
   }
 
+  if (notFound !== undefined) throw data(notFound, { status: 404 });
   throw data("Invalid parameters", { status: 400 });
 }
 

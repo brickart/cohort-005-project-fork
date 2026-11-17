@@ -21,7 +21,7 @@ import { AlertTriangle } from "lucide-react";
 import { renderMarkdown } from "~/lib/markdown.server";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData } from "~/lib/validation";
+import { parseFormData, parseParams } from "~/lib/validation";
 import {
   getCommentById,
   getLessonThread,
@@ -111,7 +111,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: `${title} — ${courseTitle} — Cadence` }];
 }
 
+const lessonParamsSchema = z.object({
+  lessonId: z.coerce.number().int().positive(),
+});
+
 export async function loader({ params, request }: Route.LoaderArgs) {
+  const { lessonId } = parseParams(params, lessonParamsSchema, {
+    notFound: "Lesson not found",
+  });
   // Not found covers an unknown course, a malformed lesson id, and a lesson
   // from another course.
   const decisions = await coursePermissions.getCourseDecisions(
@@ -124,7 +131,6 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   const { course, person, enrolled, view, take, manage } = decisions;
   const currentUserId = person?.id ?? null;
-  const lessonId = Number(params.lessonId);
 
   const courseWithDetails = getCourseWithDetails(course.id);
   const lesson = getLessonById(lessonId);
@@ -301,6 +307,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
+  const { lessonId } = parseParams(params, lessonParamsSchema, {
+    notFound: "Lesson not found",
+  });
   const formData = await request.formData();
   const intent = formData.get("intent");
 
@@ -319,7 +328,6 @@ export async function action({ params, request }: Route.ActionArgs) {
     ref
   );
   const currentUserId = person.id;
-  const lessonId = Number(params.lessonId);
 
   if (
     intent === "create-comment" ||
