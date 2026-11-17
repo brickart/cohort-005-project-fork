@@ -7,6 +7,7 @@ import { coursePermissions } from "~/modules/permissions/course-permissions.serv
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { PartyPopper, MessageCircle, PlayCircle } from "lucide-react";
+import { useConfetti } from "~/modules/celebration";
 import { data } from "react-router";
 
 function getCourseWithDetails(id: number) {
@@ -106,6 +107,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
 export default function Welcome({ loaderData }: Route.ComponentProps) {
   const { course, discordInviteUrl } = loaderData;
+  useConfetti();
 
   const firstLessonId =
     course.modules.length > 0 && course.modules[0].lessons.length > 0
@@ -113,52 +115,58 @@ export default function Welcome({ loaderData }: Route.ComponentProps) {
       : null;
 
   return (
-    <div className="mx-auto max-w-2xl p-6 lg:p-8">
-      <Card>
-        <CardContent className="p-8 text-center">
-          <div className="mb-4 inline-flex size-16 items-center justify-center rounded-full bg-primary/10">
-            <PartyPopper className="size-8 text-primary" />
-          </div>
+    <div className="flex min-h-full items-center justify-center">
+      <div className="w-full max-w-2xl p-6 lg:p-8">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="mb-4 inline-flex size-16 items-center justify-center rounded-full bg-primary/10">
+              <PartyPopper className="size-8 text-primary" />
+            </div>
 
-          <h1 className="mb-2 text-3xl font-bold">
-            Welcome to {course.title}!
-          </h1>
-          <p className="mb-8 text-lg text-muted-foreground">
-            You&apos;re officially enrolled. Here&apos;s how to get started.
-          </p>
+            <h1 className="mb-2 text-3xl font-bold">
+              Welcome to {course.title}!
+            </h1>
+            <p className="mb-8 text-lg text-muted-foreground">
+              You&apos;re officially enrolled. Here&apos;s how to get started.
+            </p>
 
-          <div className="space-y-4">
-            {discordInviteUrl && (
-              <a
-                href={discordInviteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-              >
-                <Button variant="outline" size="lg" className="w-full max-w-sm">
-                  <MessageCircle className="mr-2 size-5" />
-                  Join the Discord Community
-                </Button>
-              </a>
-            )}
+            <div className="space-y-4">
+              {discordInviteUrl && (
+                <a
+                  href={discordInviteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full max-w-sm"
+                  >
+                    <MessageCircle className="mr-2 size-5" />
+                    Join the Discord Community
+                  </Button>
+                </a>
+              )}
 
-            {firstLessonId ? (
-              <Link to={`/courses/${course.slug}/lessons/${firstLessonId}`}>
-                <Button size="lg" className="w-full max-w-sm">
-                  <PlayCircle className="mr-2 size-5" />
-                  Start Learning
-                </Button>
-              </Link>
-            ) : (
-              <Link to={`/courses/${course.slug}`}>
-                <Button size="lg" className="w-full max-w-sm">
-                  Go to Course
-                </Button>
-              </Link>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              {firstLessonId ? (
+                <Link to={`/courses/${course.slug}/lessons/${firstLessonId}`}>
+                  <Button size="lg" className="w-full max-w-sm">
+                    <PlayCircle className="mr-2 size-5" />
+                    Start Learning
+                  </Button>
+                </Link>
+              ) : (
+                <Link to={`/courses/${course.slug}`}>
+                  <Button size="lg" className="w-full max-w-sm">
+                    Go to Course
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
