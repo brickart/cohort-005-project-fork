@@ -183,11 +183,42 @@ jobs:
             exit 1
           fi
 
+      - name: Install agent-browser
+        # The agent checks UI changes in a real browser
+        # (docs/agents/agent-browser.md). Installed here so no run spends its
+        # own turns installing it.
+        run: |
+          npm install -g agent-browser
+          agent-browser install
+
+      - name: Start the dev server
+        # Up before the agent starts, so it can open pages straight away. Its
+        # output goes to /tmp/dev.log, where the browser doc points the agent.
+        # No token in this step's environment, and the step after the agent
+        # stops it, so it is gone before any step that holds one.
+        run: |
+          nohup npm run dev > /tmp/dev.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:5173/; then exit 0; fi
+            sleep 1
+          done
+          echo "::error::The dev server did not answer on :5173 within 60s."
+          cat /tmp/dev.log
+          exit 1
+
       - name: Review the pull request
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           OUTPUT_DIR: ${{ runner.temp }}
         run: npx tsx .sandcastle/agent-workflows/review/review.ts
+
+      - name: Stop the dev server
+        # The server and the browser run code from the branch. The steps after
+        # this one hold FACTORY_PAT, so neither outlives the agent.
+        if: always()
+        run: |
+          agent-browser close >/dev/null 2>&1 || true
+          pkill -f "react-router dev" || true
 
       - name: Push the review's fixes
         id: push
