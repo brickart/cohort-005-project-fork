@@ -1,5 +1,5 @@
 import { NavLink, Form } from "react-router";
-import { useState, useEffect } from "react";
+import { setDocumentTheme, useTheme } from "~/modules/theme";
 import { cn } from "~/lib/utils";
 import { UserRole } from "~/db/schema";
 import { UserAvatar } from "~/components/user-avatar";
@@ -127,19 +127,10 @@ export function Sidebar({
   isTeamAdmin = false,
 }: SidebarProps) {
   const currentUserRole = currentUser?.role ?? null;
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
+  const isDark = useTheme() === "dark";
 
   function toggleDarkMode() {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    try {
-      localStorage.setItem("cadence-theme", next ? "dark" : "light");
-    } catch {}
+    setDocumentTheme(isDark ? "light" : "dark");
   }
 
   return (
