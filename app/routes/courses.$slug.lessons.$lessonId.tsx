@@ -21,7 +21,7 @@ import { AlertTriangle } from "lucide-react";
 import { renderMarkdown } from "~/lib/markdown.server";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData } from "~/lib/validation";
+import { idParam, parseFormData, parseParams } from "~/lib/validation";
 import {
   getCommentById,
   getLessonThread,
@@ -84,10 +84,10 @@ const deleteCommentSchema = z.object({
 
 /**
  * The course named by this route's slug, through this lesson. A lesson in
- * another course, or a malformed lesson id, counts as not found.
+ * another course counts as not found.
  */
-function lessonRef(params: { slug: string; lessonId: string }): CourseRef {
-  return { slug: params.slug, lessonId: params.lessonId };
+function lessonRef(slug: string, lessonId: number): CourseRef {
+  return { slug, lessonId };
 }
 
 /**
@@ -111,12 +111,17 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: `${title} — ${courseTitle} — Cadence` }];
 }
 
+const lessonParamsSchema = z.object({ lessonId: idParam });
+
 export async function loader({ params, request }: Route.LoaderArgs) {
+  const { lessonId } = parseParams(params, lessonParamsSchema, {
+    notFound: "Lesson not found",
+  });
   // Not found covers an unknown course, a malformed lesson id, and a lesson
   // from another course.
   const decisions = await coursePermissions.getCourseDecisions(
     request,
-    lessonRef(params)
+    lessonRef(params.slug, lessonId)
   );
   if (!decisions.found) {
     throw data("Lesson not found", { status: 404 });
@@ -124,7 +129,6 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   const { course, person, enrolled, view, take, manage } = decisions;
   const currentUserId = person?.id ?? null;
-  const lessonId = Number(params.lessonId);
 
   const courseWithDetails = getCourseWithDetails(course.id);
   const lesson = getLessonById(lessonId);
@@ -301,6 +305,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
+  const { lessonId } = parseParams(params, lessonParamsSchema, {
+    notFound: "Lesson not found",
+  });
   const formData = await request.formData();
   const intent = formData.get("intent");
 
@@ -312,14 +319,13 @@ export async function action({ params, request }: Route.ActionArgs) {
   if (!capability) {
     throw data("Invalid action", { status: 400 });
   }
-  const ref = lessonRef(params);
+  const ref = lessonRef(params.slug, lessonId);
   const { person } = await coursePermissions.requireCapability(
     request,
     capability,
     ref
   );
   const currentUserId = person.id;
-  const lessonId = Number(params.lessonId);
 
   if (
     intent === "create-comment" ||

@@ -1,5 +1,5 @@
 import { data } from "react-router";
-import type { z } from "zod";
+import { z } from "zod";
 
 type ParseSuccess<T> = { success: true; data: T };
 type ParseFailure = {
@@ -35,12 +35,21 @@ export function parseFormData<T extends z.ZodType>(
 }
 
 /**
+ * A database id from a route param or a form field. `Number("")` is 0, so an
+ * empty or malformed id fails here instead of reaching a query.
+ */
+export const idParam = z.coerce.number().int().positive();
+
+/**
  * Validates route params with a Zod schema.
  * Throws a 400 response on failure (params are never user-correctable form errors).
+ * Pass `notFound` to throw a 404 with that message instead, for a route that
+ * treats a malformed id like a missing row.
  */
 export function parseParams<T extends z.ZodType>(
   params: Record<string, string | undefined>,
-  schema: T
+  schema: T,
+  { notFound }: { notFound?: string } = {}
 ): z.infer<T> {
   const result = schema.safeParse(params);
 
@@ -48,6 +57,7 @@ export function parseParams<T extends z.ZodType>(
     return result.data;
   }
 
+  if (notFound !== undefined) throw data(notFound, { status: 404 });
   throw data("Invalid parameters", { status: 400 });
 }
 

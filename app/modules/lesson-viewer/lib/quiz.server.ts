@@ -1,4 +1,4 @@
-import { db } from "~/db";
+import type { Db } from "./db";
 import {
   quizzes,
   quizQuestions,
@@ -8,7 +8,7 @@ import {
 } from "~/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 
-export function getQuizByLessonId(lessonId: number) {
+export function getQuizByLessonId(db: Db, lessonId: number) {
   return db.select().from(quizzes).where(eq(quizzes.lessonId, lessonId)).get();
 }
 
@@ -16,7 +16,7 @@ export function getQuizByLessonId(lessonId: number) {
  * The quiz with this id, only if it belongs to this Lesson, so a quiz
  * elsewhere can't be reached by posting its id to another Lesson's route.
  */
-export function getQuizInLesson(quizId: number, lessonId: number) {
+export function getQuizInLesson(db: Db, quizId: number, lessonId: number) {
   return db
     .select()
     .from(quizzes)
@@ -24,7 +24,7 @@ export function getQuizInLesson(quizId: number, lessonId: number) {
     .get();
 }
 
-export function getQuizWithQuestions(quizId: number) {
+export function getQuizWithQuestions(db: Db, quizId: number) {
   const quiz = db.select().from(quizzes).where(eq(quizzes.id, quizId)).get();
   if (!quiz) return null;
 
@@ -47,7 +47,7 @@ export function getQuizWithQuestions(quizId: number) {
   return { ...quiz, questions: questionsWithOptions };
 }
 
-export function getBestAttempt(userId: number, quizId: number) {
+export function getBestAttempt(db: Db, userId: number, quizId: number) {
   return db
     .select()
     .from(quizAttempts)
@@ -75,8 +75,8 @@ type QuestionResult = {
 };
 
 export function computeResult(
-  userId: number,
-  quizId: number,
+  db: Db,
+  { userId, quizId }: { userId: number; quizId: number },
   selectedAnswers: Record<number, number>
 ) {
   try {
