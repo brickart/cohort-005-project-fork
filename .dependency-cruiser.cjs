@@ -95,6 +95,14 @@ module.exports = {
       to: { path: ["^app/db/", "^node_modules/(drizzle-orm|better-sqlite3)/"] },
     },
     {
+      name: "module-internals-take-db-as-argument",
+      comment:
+        "A module's lib/ takes the database as an argument; only its entry points import the shared connection and pass it in. That lets its tests hand lib/ a fresh test database instead of mocking ~/db. See app/modules/instructor-analytics/index.server.ts.",
+      severity: "error",
+      from: { path: `^${R}/[^/]+/lib/` },
+      to: { path: "^app/db/index\\.ts$" },
+    },
+    {
       name: "components-no-db-connection",
       comment:
         "Components ship to the browser, so they may not open the database connection: it pulls better-sqlite3 into the client bundle and breaks hydration. Get data through a loader instead.",

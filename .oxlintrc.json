@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "react", "jsx-a11y", "import", "vitest"],
-  "jsPlugins": ["./lint-rules/sql-raw.js"],
+  "jsPlugins": ["./lint-rules/sql-raw.js", "./lint-rules/clock.js"],
   "categories": {
     "correctness": "error"
   },
@@ -89,6 +89,13 @@
     "sql/no-dynamic-raw": "error"
   },
   "overrides": [
+    {
+      // "Inject the clock": a module's internals take the time as an argument.
+      "files": ["app/modules/*/lib/**"],
+      "rules": {
+        "clock/no-clock-read": "error"
+      }
+    },
     {
       "files": [
         "app/routes/**",

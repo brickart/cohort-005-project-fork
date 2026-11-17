@@ -93,7 +93,8 @@ files and `"Pending"` in one.
 
 A function that calls `Date.now()` cannot be tested at a fixed moment. Take
 the time as an argument. The refund window tests failed every night at
-midnight until we did this.
+midnight until we did this. Inside `app/modules/*/lib/` oxlint enforces this
+(`clock/no-clock-read`); apply it everywhere else by hand.
 
 ## Keep secrets on the server
 
