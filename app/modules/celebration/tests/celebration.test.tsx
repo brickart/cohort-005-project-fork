@@ -25,18 +25,17 @@ describe("centreOf", () => {
 describe("celebrate", () => {
   function run(prefersReducedMotion: boolean) {
     const bursts: BurstOptions[] = [];
-    const fired = celebrate({
+    celebrate({
       target: card,
       frame: contentArea,
       fire: (options) => bursts.push(options),
       prefersReducedMotion,
     });
-    return { fired, bursts };
+    return bursts;
   }
 
   it("bursts from the centre of the card", () => {
-    const { fired, bursts } = run(false);
-    expect(fired).toBe(true);
+    const bursts = run(false);
     expect(bursts.length).toBeGreaterThan(0);
     for (const burst of bursts) {
       expect(burst.origin).toEqual({ x: 0.5, y: 0.5 });
@@ -45,12 +44,12 @@ describe("celebrate", () => {
   });
 
   it("sends some confetti all the way round the card", () => {
-    const { bursts } = run(false);
+    const bursts = run(false);
     expect(bursts.some((b) => b.spread === 360)).toBe(true);
   });
 
   it("fires nothing for a Student who prefers reduced motion", () => {
-    expect(run(true)).toEqual({ fired: false, bursts: [] });
+    expect(run(true)).toEqual([]);
   });
 });
 

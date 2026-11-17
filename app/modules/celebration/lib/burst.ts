@@ -26,7 +26,6 @@ export function centreOf(target: Box, frame: Box): Origin {
 /**
  * Bursts confetti out from behind the centre of `target`: one fountain
  * upwards and one ring all round, fast enough to clear the card's edges.
- * Returns whether it fired.
  */
 export function celebrate({
   target,
@@ -38,10 +37,9 @@ export function celebrate({
   frame: Box;
   fire: Fire;
   prefersReducedMotion: boolean;
-}): boolean {
-  if (prefersReducedMotion) return false;
+}): void {
+  if (prefersReducedMotion) return;
   const origin = centreOf(target, frame);
   fire({ origin, particleCount: 120, spread: 100, startVelocity: 55 });
   fire({ origin, particleCount: 80, spread: 360, startVelocity: 40 });
-  return true;
 }
