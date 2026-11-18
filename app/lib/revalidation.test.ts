@@ -35,4 +35,10 @@ describe("searchOnlyNavigation", () => {
       true
     );
   });
+
+  it("revalidates on a navigation to the same URL", () => {
+    expect(
+      searchOnlyNavigation(args("/instructor/1?q=ada", "/instructor/1?q=ada"))
+    ).toBe(true);
+  });
 });
