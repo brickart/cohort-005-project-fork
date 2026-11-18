@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useFetcher } from "react-router";
+import { Link, useFetcher, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import type { Route } from "./+types/instructor.$courseId";
 import { coursePermissions } from "~/modules/permissions/course-permissions.server";
@@ -35,7 +35,9 @@ import {
 } from "~/components/course-editor/course-header-editors";
 import { ContentTab } from "~/components/course-editor/content-tab";
 import { SettingsTab } from "~/components/course-editor/settings-tab";
-import { StudentsTab } from "~/components/course-editor/students-tab";
+import { RosterPanel } from "~/components/course-roster/roster-panel";
+import { courseRoster } from "~/modules/course-roster/index.server";
+import { searchOnlyNavigation } from "~/lib/revalidation";
 import {
   ArrowLeft,
   BookOpen,
@@ -47,131 +49,12 @@ import {
 } from "lucide-react";
 import { data, isRouteErrorResponse } from "react-router";
 import { parseFormData } from "~/lib/validation";
-import { db } from "~/db";
-import {
-  users,
-  modules,
-  lessons,
-  enrollments,
-  lessonProgress,
-  LessonProgressStatus,
-  quizzes,
-  quizAttempts,
-} from "~/db/schema";
-import { eq, and, or, sql, desc } from "drizzle-orm";
 
-function getUserById(id: number) {
-  return db.select().from(users).where(eq(users.id, id)).get();
-}
+const TABS = ["content", "settings", "sales-copy", "students"] as const;
 
-function getCourseLessonIds(courseId: number): number[] {
-  const courseModules = db
-    .select({ id: modules.id })
-    .from(modules)
-    .where(eq(modules.courseId, courseId))
-    .all();
-
-  if (courseModules.length === 0) return [];
-
-  const courseLessons = db
-    .select({ id: lessons.id })
-    .from(lessons)
-    .where(or(...courseModules.map((m) => eq(lessons.moduleId, m.id))))
-    .all();
-
-  return courseLessons.map((l) => l.id);
-}
-
-function calculateProgress(
-  userId: number,
-  courseId: number,
-  weightByDuration: boolean
-) {
-  const lessonIds = getCourseLessonIds(courseId);
-
-  if (lessonIds.length === 0) return 0;
-
-  if (weightByDuration) {
-    const courseLessons = db
-      .select({
-        id: lessons.id,
-        durationMinutes: lessons.durationMinutes,
-      })
-      .from(lessons)
-      .where(or(...lessonIds.map((id) => eq(lessons.id, id))))
-      .all();
-
-    const totalDuration = courseLessons.reduce(
-      (sum, l) => sum + (l.durationMinutes ?? 1),
-      0
-    );
-
-    if (totalDuration === 0) return 0;
-
-    const completed = db
-      .select()
-      .from(lessonProgress)
-      .where(
-        and(
-          eq(lessonProgress.userId, userId),
-          eq(lessonProgress.status, LessonProgressStatus.Completed),
-          or(...lessonIds.map((id) => eq(lessonProgress.lessonId, id)))
-        )
-      )
-      .all();
-
-    const completedIds = new Set(completed.map((p) => p.lessonId));
-
-    const completedDuration = courseLessons
-      .filter((l) => completedIds.has(l.id))
-      .reduce((sum, l) => sum + (l.durationMinutes ?? 1), 0);
-
-    return Math.round((completedDuration / totalDuration) * 100);
-  }
-
-  const completedCount = db
-    .select({ count: sql<number>`count(*)` })
-    .from(lessonProgress)
-    .where(
-      and(
-        eq(lessonProgress.userId, userId),
-        eq(lessonProgress.status, LessonProgressStatus.Completed),
-        or(...lessonIds.map((id) => eq(lessonProgress.lessonId, id)))
-      )
-    )
-    .get();
-
-  return Math.round(((completedCount?.count ?? 0) / lessonIds.length) * 100);
-}
-
-function getQuizByLessonId(lessonId: number) {
-  return db.select().from(quizzes).where(eq(quizzes.lessonId, lessonId)).get();
-}
-
-function getBestAttempt(userId: number, quizId: number) {
-  return db
-    .select()
-    .from(quizAttempts)
-    .where(
-      and(eq(quizAttempts.userId, userId), eq(quizAttempts.quizId, quizId))
-    )
-    .orderBy(desc(quizAttempts.score))
-    .limit(1)
-    .get();
-}
-
-function getCourseEnrolledStudents(courseId: number) {
-  return db
-    .select({
-      enrollmentId: enrollments.id,
-      userId: enrollments.userId,
-      enrolledAt: enrollments.enrolledAt,
-      completedAt: enrollments.completedAt,
-    })
-    .from(enrollments)
-    .where(eq(enrollments.courseId, courseId))
-    .all();
-}
+// The roster filters and sorts in the browser, so changing its view needs no
+// trip to the loader.
+export const shouldRevalidate = searchOnlyNavigation;
 
 export function meta({ loaderData }: Route.MetaArgs) {
   const title = loaderData?.course?.title ?? "Edit Course";
@@ -196,56 +79,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const lessonCount = getLessonCountForCourse(courseId);
   const enrollmentCount = getEnrollmentCountForCourse(courseId);
 
-  // Student roster data
-  const enrolledStudents = getCourseEnrolledStudents(courseId);
-
-  // Gather all lessons from the course modules and find which have quizzes
-  const allCourseLessons = course.modules.flatMap((mod) => mod.lessons);
-  const lessonQuizzes: {
-    lessonId: number;
-    lessonTitle: string;
-    quizId: number;
-    quizTitle: string;
-  }[] = [];
-  for (const lesson of allCourseLessons) {
-    const quiz = getQuizByLessonId(lesson.id);
-    if (quiz) {
-      lessonQuizzes.push({
-        lessonId: lesson.id,
-        lessonTitle: lesson.title,
-        quizId: quiz.id,
-        quizTitle: quiz.title,
-      });
-    }
-  }
-
-  const students = enrolledStudents.map((enrollment) => {
-    const studentUser = getUserById(enrollment.userId);
-    const progress = calculateProgress(enrollment.userId, courseId, false);
-
-    const quizScores = lessonQuizzes.map((lq) => {
-      const bestAttempt = getBestAttempt(enrollment.userId, lq.quizId);
-      return {
-        quizId: lq.quizId,
-        quizTitle: lq.quizTitle,
-        lessonTitle: lq.lessonTitle,
-        bestScore: bestAttempt?.score ?? null,
-        passed: bestAttempt?.passed ?? null,
-      };
-    });
-
-    return {
-      userId: enrollment.userId,
-      name: studentUser?.name ?? "Unknown",
-      email: studentUser?.email ?? "",
-      enrolledAt: enrollment.enrolledAt,
-      completedAt: enrollment.completedAt,
-      progress,
-      quizScores,
-    };
+  const { students, quizCount } = courseRoster.list(courseId, {
+    includeLapsed: false,
   });
-
-  const quizCount = lessonQuizzes.length;
 
   return { course, lessonCount, enrollmentCount, students, quizCount };
 }
@@ -443,6 +279,16 @@ export default function InstructorCourseEditor({
   const { course, lessonCount, enrollmentCount, students, quizCount } =
     loaderData;
   const salesCopyFetcher = useFetcher();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab =
+    TABS.find((name) => name === searchParams.get("tab")) ?? "content";
+
+  function setTab(next: string) {
+    const params = new URLSearchParams(searchParams);
+    if (next === "content") params.delete("tab");
+    else params.set("tab", next);
+    setSearchParams(params, { replace: true, preventScrollReset: true });
+  }
 
   const [salesCopy, setSalesCopy] = useState<string>(course.salesCopy);
   const salesCopyHasChanges = salesCopy !== course.salesCopy;
@@ -510,7 +356,7 @@ export default function InstructorCourseEditor({
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="content">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="content">
             <BookOpen className="size-4" />
@@ -585,7 +431,7 @@ export default function InstructorCourseEditor({
         </TabsContent>
 
         <TabsContent value="students" className="mt-6">
-          <StudentsTab students={students} quizCount={quizCount} />
+          <RosterPanel students={students} quizCount={quizCount} />
         </TabsContent>
       </Tabs>
     </div>

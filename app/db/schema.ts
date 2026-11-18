@@ -27,6 +27,14 @@ export enum LessonProgressStatus {
   Completed = "completed",
 }
 
+// Worked out for the instructor's student roster, never stored.
+export enum RosterStatus {
+  NotStarted = "not_started",
+  InProgress = "in_progress",
+  Completed = "completed",
+  Lapsed = "lapsed",
+}
+
 export enum QuestionType {
   MultipleChoice = "multiple_choice",
   TrueFalse = "true_false",
