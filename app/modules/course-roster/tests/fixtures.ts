@@ -1,9 +1,16 @@
+import { and, eq } from "drizzle-orm";
 import * as schema from "~/db/schema";
-import { LessonProgressStatus, UserRole } from "~/db/schema";
+import { QuestionType, UserRole } from "~/db/schema";
+import {
+  markLessonComplete,
+  markLessonInProgress,
+} from "~/modules/lesson-viewer/course.server";
+import { computeResult } from "~/modules/lesson-viewer/quiz.server";
 import type { TestDb } from "~/test/setup";
 
-// Nothing in a module writes these tables, so rows go in directly. Kept in
-// one place so a schema change touches only this file.
+// Users, curriculum, enrollments and purchases go in directly: no module
+// writes them. Lesson progress and quiz attempts go through lesson-viewer,
+// which owns them, and so need `~/db` mocked to the test database.
 
 export function addStudent(
   db: TestDb,
@@ -33,12 +40,34 @@ export function addLesson(db: TestDb, moduleId: number, position: number) {
     .get();
 }
 
+// Ten questions, so an attempt can score any tenth.
+const QUESTIONS_PER_QUIZ = 10;
+
 export function addQuiz(db: TestDb, lessonId: number, title: string) {
-  return db
+  const quiz = db
     .insert(schema.quizzes)
     .values({ lessonId, title, passingScore: 0.7 })
     .returning()
     .get();
+  for (let position = 1; position <= QUESTIONS_PER_QUIZ; position++) {
+    const question = db
+      .insert(schema.quizQuestions)
+      .values({
+        quizId: quiz.id,
+        questionText: `Question ${position}`,
+        questionType: QuestionType.MultipleChoice,
+        position,
+      })
+      .returning()
+      .get();
+    db.insert(schema.quizOptions)
+      .values([
+        { questionId: question.id, optionText: "Right", isCorrect: true },
+        { questionId: question.id, optionText: "Wrong", isCorrect: false },
+      ])
+      .run();
+  }
+  return quiz;
 }
 
 export function enroll(
@@ -62,25 +91,44 @@ export function enroll(
     .get();
 }
 
-export function completeLesson(db: TestDb, userId: number, lessonId: number) {
-  db.insert(schema.lessonProgress)
-    .values({ userId, lessonId, status: LessonProgressStatus.Completed })
-    .run();
+export function completeLesson(userId: number, lessonId: number) {
+  markLessonComplete(userId, lessonId);
 }
 
-export function startLesson(db: TestDb, userId: number, lessonId: number) {
-  db.insert(schema.lessonProgress)
-    .values({ userId, lessonId, status: LessonProgressStatus.InProgress })
-    .run();
+export function startLesson(userId: number, lessonId: number) {
+  markLessonInProgress(userId, lessonId);
 }
 
+/** Answers enough questions right to score `score`, a whole tenth. */
 export function attemptQuiz(
   db: TestDb,
   { userId, quizId, score }: { userId: number; quizId: number; score: number }
 ) {
-  db.insert(schema.quizAttempts)
-    .values({ userId, quizId, score, passed: score >= 0.7 })
-    .run();
+  const rightOptions = db
+    .select({
+      questionId: schema.quizOptions.questionId,
+      optionId: schema.quizOptions.id,
+    })
+    .from(schema.quizOptions)
+    .innerJoin(
+      schema.quizQuestions,
+      eq(schema.quizOptions.questionId, schema.quizQuestions.id)
+    )
+    .where(
+      and(
+        eq(schema.quizQuestions.quizId, quizId),
+        eq(schema.quizOptions.isCorrect, true)
+      )
+    )
+    .all()
+    .slice(0, Math.round(score * QUESTIONS_PER_QUIZ));
+  computeResult(
+    userId,
+    quizId,
+    Object.fromEntries(
+      rightOptions.map(({ questionId, optionId }) => [questionId, optionId])
+    )
+  );
 }
 
 export function purchase(

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as schema from "~/db/schema";
 import { RosterStatus } from "~/db/schema";
 import { createTestDb, seedBaseData, type TestDb } from "~/test/setup";
@@ -15,6 +15,11 @@ import {
   startLesson,
 } from "./fixtures";
 
+// Lesson progress and quiz attempts go through lesson-viewer, which reads
+// the app's shared `db`; point it at a fresh test database.
+const shared = vi.hoisted(() => ({ db: undefined as unknown }));
+vi.mock("~/db", () => shared);
+
 const JAN = "2026-01-10T12:00:00.000Z";
 const FEB = "2026-02-10T12:00:00.000Z";
 const MAR = "2026-03-10T12:00:00.000Z";
@@ -26,6 +31,7 @@ let roster: ReturnType<typeof createCourseRoster>;
 
 beforeEach(() => {
   db = createTestDb();
+  shared.db = db;
   const base = seedBaseData(db);
   courseId = base.course.id;
   otherCourseId = db
@@ -81,9 +87,9 @@ describe("courseRoster.list", () => {
     const otherLesson = addLesson(db, addModule(db, otherCourseId, 1).id, 1);
     const ada = addStudent(db, "Ada");
     enroll(db, { userId: ada.id, courseId, enrolledAt: JAN });
-    completeLesson(db, ada.id, lessons[0].id);
-    startLesson(db, ada.id, lessons[1].id);
-    completeLesson(db, ada.id, otherLesson.id);
+    completeLesson(ada.id, lessons[0].id);
+    startLesson(ada.id, lessons[1].id);
+    completeLesson(ada.id, otherLesson.id);
 
     expect(list().students[0].progress).toBe(33);
   });
@@ -101,7 +107,7 @@ describe("courseRoster.list", () => {
       enrolledAt: JAN,
       completedAt: FEB,
     });
-    completeLesson(db, busy.id, lesson.id);
+    completeLesson(busy.id, lesson.id);
 
     expect(list().students.map((s) => [s.name, s.status])).toEqual([
       ["Fresh", RosterStatus.NotStarted],
@@ -169,8 +175,8 @@ describe("courseRoster.list", () => {
       const enrolled = addStudent(db, "Enrolled");
       const lapsed = addStudent(db, "Lapsed");
       enroll(db, { userId: enrolled.id, courseId, enrolledAt: JAN });
-      completeLesson(db, enrolled.id, lesson.id);
-      completeLesson(db, lapsed.id, lesson.id);
+      completeLesson(enrolled.id, lesson.id);
+      completeLesson(lapsed.id, lesson.id);
       purchase(db, { userId: lapsed.id, courseId, createdAt: JAN });
       purchase(db, { userId: lapsed.id, courseId, createdAt: MAR });
       return { lapsed };
