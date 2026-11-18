@@ -1,6 +1,7 @@
 import { RosterStatus } from "~/db/schema";
 import { isLapsed } from "~/lib/enrollments";
 import {
+  attemptKey,
   bestAttempts,
   completedLessonCounts,
   courseLessonIds,
@@ -58,7 +59,7 @@ export function listRoster(
       progress,
       status: statusOf(entry, progress),
       quizScores: quizzes.map((quiz) => {
-        const best = attempts.get(`${entry.userId}:${quiz.quizId}`);
+        const best = attempts.get(attemptKey(entry.userId, quiz.quizId));
         return {
           ...quiz,
           bestScore: best?.score ?? null,

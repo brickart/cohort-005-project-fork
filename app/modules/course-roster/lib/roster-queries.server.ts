@@ -131,7 +131,11 @@ export function completedLessonCounts(
   return new Map(rows.map((row) => [row.userId, row.count]));
 }
 
-/** Each Student's best attempt per quiz, keyed `${userId}:${quizId}`. */
+export function attemptKey(userId: number, quizId: number): string {
+  return `${userId}:${quizId}`;
+}
+
+/** Each Student's best attempt per quiz, keyed by `attemptKey`. */
 export function bestAttempts(
   db: Db,
   { quizIds, userIds }: { quizIds: number[]; userIds: number[] }
@@ -155,7 +159,7 @@ export function bestAttempts(
     .all();
   return new Map(
     rows.map((row) => [
-      `${row.userId}:${row.quizId}`,
+      attemptKey(row.userId, row.quizId),
       { score: row.score, passed: Boolean(row.passed) },
     ])
   );
