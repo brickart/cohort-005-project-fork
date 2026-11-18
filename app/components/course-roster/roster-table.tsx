@@ -4,6 +4,7 @@ import type {
   RosterSortColumn,
   RosterStudent,
   RosterView,
+  SortDirection,
 } from "~/modules/course-roster";
 import { ProgressBar, QuizScoreBadge, StatusBadge } from "./roster-badges";
 
@@ -63,27 +64,22 @@ export function RosterTable({
   );
 }
 
+const HEADER_SORT = {
+  asc: { Icon: ArrowUp, ariaSort: "ascending" },
+  desc: { Icon: ArrowDown, ariaSort: "descending" },
+  none: { Icon: ArrowUpDown, ariaSort: "none" },
+} as const;
+
 function SortableHeader({
   label,
   direction,
   onClick,
 }: {
   label: string;
-  direction: "asc" | "desc" | null;
+  direction: SortDirection | null;
   onClick: () => void;
 }) {
-  const Icon =
-    direction === "asc"
-      ? ArrowUp
-      : direction === "desc"
-        ? ArrowDown
-        : ArrowUpDown;
-  const ariaSort =
-    direction === "asc"
-      ? "ascending"
-      : direction === "desc"
-        ? "descending"
-        : "none";
+  const { Icon, ariaSort } = HEADER_SORT[direction ?? "none"];
 
   return (
     <th aria-sort={ariaSort} className="px-4 py-3 text-left">

@@ -11,7 +11,8 @@ export const ROSTER_SORT_COLUMNS = [
 ] as const;
 
 export type RosterSortColumn = (typeof ROSTER_SORT_COLUMNS)[number];
-export type SortDirection = "asc" | "desc";
+export const SORT_DIRECTIONS = ["asc", "desc"] as const;
+export type SortDirection = (typeof SORT_DIRECTIONS)[number];
 
 export type RosterView = {
   q: string;
@@ -43,7 +44,7 @@ const viewSchema = z.object({
     .union([z.nativeEnum(RosterStatus), z.literal("")])
     .catch(DEFAULT_ROSTER_VIEW.status),
   sort: z.enum(ROSTER_SORT_COLUMNS).catch(DEFAULT_ROSTER_VIEW.sort),
-  dir: z.enum(["asc", "desc"]).catch(DEFAULT_ROSTER_VIEW.dir),
+  dir: z.enum(SORT_DIRECTIONS).catch(DEFAULT_ROSTER_VIEW.dir),
 });
 
 /** Read the roster view from search params. Anything unusable falls back to the default. */
