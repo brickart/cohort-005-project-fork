@@ -11,4 +11,4 @@ export {
   type RosterView,
   type SortDirection,
 } from "./lib/view";
-export type { RosterQuizScore, RosterStudent } from "./lib/types";
+export type { CourseRoster, RosterQuizScore, RosterStudent } from "./lib/types";

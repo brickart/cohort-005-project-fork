@@ -79,11 +79,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const lessonCount = getLessonCountForCourse(courseId);
   const enrollmentCount = getEnrollmentCountForCourse(courseId);
 
-  const { students, quizCount } = courseRoster.list(courseId, {
-    includeLapsed: false,
-  });
+  const roster = courseRoster.list(courseId, { includeLapsed: false });
 
-  return { course, lessonCount, enrollmentCount, students, quizCount };
+  return { course, lessonCount, enrollmentCount, roster };
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
@@ -276,8 +274,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 export default function InstructorCourseEditor({
   loaderData,
 }: Route.ComponentProps) {
-  const { course, lessonCount, enrollmentCount, students, quizCount } =
-    loaderData;
+  const { course, lessonCount, enrollmentCount, roster } = loaderData;
   const salesCopyFetcher = useFetcher();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab =
@@ -431,7 +428,7 @@ export default function InstructorCourseEditor({
         </TabsContent>
 
         <TabsContent value="students" className="mt-6">
-          <RosterPanel students={students} quizCount={quizCount} />
+          <RosterPanel roster={roster} />
         </TabsContent>
       </Tabs>
     </div>

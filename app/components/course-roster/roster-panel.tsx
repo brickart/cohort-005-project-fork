@@ -1,17 +1,15 @@
 import { Award, Users } from "lucide-react";
 import { Card, CardContent } from "~/components/ui/card";
-import { applyRosterView, type RosterStudent } from "~/modules/course-roster";
+import { applyRosterView, type CourseRoster } from "~/modules/course-roster";
 import { RosterTable } from "./roster-table";
 import { RosterToolbar } from "./roster-toolbar";
 import { useRosterView } from "./use-roster-view";
 
 /** The searchable, sortable student roster; its view lives in the URL. */
 export function RosterPanel({
-  students,
-  quizCount,
+  roster: { students, quizCount },
 }: {
-  students: RosterStudent[];
-  quizCount: number;
+  roster: CourseRoster;
 }) {
   const { view, change, sortBy, clearFilters } = useRosterView();
   const shown = applyRosterView(students, view);

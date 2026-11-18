@@ -27,17 +27,15 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     { courseId: params.courseId }
   );
 
-  const { students, quizCount } = courseRoster.list(course.id, {
-    includeLapsed: true,
-  });
+  const roster = courseRoster.list(course.id, { includeLapsed: true });
 
-  return { course, students, quizCount };
+  return { course, roster };
 }
 
 export default function InstructorStudentRoster({
   loaderData,
 }: Route.ComponentProps) {
-  const { course, students, quizCount } = loaderData;
+  const { course, roster } = loaderData;
 
   return (
     <div className="mx-auto max-w-7xl p-6 lg:p-8">
@@ -69,7 +67,7 @@ export default function InstructorStudentRoster({
         </p>
       </div>
 
-      <RosterPanel students={students} quizCount={quizCount} />
+      <RosterPanel roster={roster} />
     </div>
   );
 }
