@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
+import { withSearchParams } from "~/lib/search-params";
 import {
   DEFAULT_ROSTER_VIEW,
   parseRosterView,
@@ -26,14 +27,7 @@ function useUrlRosterView() {
 
   const update = useCallback(
     (changes: Partial<RosterView>) => {
-      const next = new URLSearchParams(searchParams);
-      for (const [key, value] of Object.entries(changes)) {
-        if (value === DEFAULT_ROSTER_VIEW[key as keyof RosterView]) {
-          next.delete(key);
-        } else {
-          next.set(key, value);
-        }
-      }
+      const next = withSearchParams(searchParams, changes, DEFAULT_ROSTER_VIEW);
       setSearchParams(next, {
         replace: true,
         preventScrollReset: true,

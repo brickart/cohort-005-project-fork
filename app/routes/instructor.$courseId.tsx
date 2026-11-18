@@ -38,6 +38,7 @@ import { SettingsTab } from "~/components/course-editor/settings-tab";
 import { RosterPanel } from "~/components/course-roster/roster-panel";
 import { courseRoster } from "~/modules/course-roster/index.server";
 import { searchOnlyNavigation } from "~/lib/revalidation";
+import { withSearchParams } from "~/lib/search-params";
 import {
   ArrowLeft,
   BookOpen,
@@ -281,10 +282,10 @@ export default function InstructorCourseEditor({
     TABS.find((name) => name === searchParams.get("tab")) ?? "content";
 
   function setTab(next: string) {
-    const params = new URLSearchParams(searchParams);
-    if (next === "content") params.delete("tab");
-    else params.set("tab", next);
-    setSearchParams(params, { replace: true, preventScrollReset: true });
+    setSearchParams(
+      withSearchParams(searchParams, { tab: next }, { tab: "content" }),
+      { replace: true, preventScrollReset: true }
+    );
   }
 
   const [salesCopy, setSalesCopy] = useState<string>(course.salesCopy);
