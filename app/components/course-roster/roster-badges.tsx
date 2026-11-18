@@ -22,6 +22,10 @@ const STATUS_BADGE: Record<RosterStatus, { label: string; colours: string }> = {
   },
 };
 
+export function statusLabel(status: RosterStatus): string {
+  return STATUS_BADGE[status].label;
+}
+
 export function StatusBadge({ status }: { status: RosterStatus }) {
   const { label, colours } = STATUS_BADGE[status];
   return (

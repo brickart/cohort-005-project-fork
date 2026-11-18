@@ -47,6 +47,7 @@ describe("parseRosterView", () => {
       q: "",
       from: "",
       to: "",
+      status: "",
       sort: "enrolled",
       dir: "desc",
     });
@@ -54,13 +55,14 @@ describe("parseRosterView", () => {
 
   it("reads each param", () => {
     const params = new URLSearchParams(
-      "q=ada&from=2026-01-01&to=2026-02-01&sort=name&dir=asc"
+      "q=ada&from=2026-01-01&to=2026-02-01&status=completed&sort=name&dir=asc"
     );
 
     expect(parseRosterView(params)).toEqual({
       q: "ada",
       from: "2026-01-01",
       to: "2026-02-01",
+      status: RosterStatus.Completed,
       sort: "name",
       dir: "asc",
     });
@@ -74,7 +76,7 @@ describe("parseRosterView", () => {
 
   it("falls back to the default for a param it cannot use", () => {
     const params = new URLSearchParams(
-      "from=yesterday&to=2026-13&sort=shoe-size&dir=sideways"
+      "from=yesterday&to=2026-13&status=asleep&sort=shoe-size&dir=sideways"
     );
 
     expect(parseRosterView(params)).toEqual(DEFAULT_ROSTER_VIEW);
@@ -87,26 +89,56 @@ describe("filterRoster", () => {
     student("Alan Turing", { email: "alan@bletchley.uk" }),
     student("Grace Hopper", { email: "grace@navy.mil" }),
   ];
-  const noDates = { from: "", to: "" };
+  const noFilters = { from: "", to: "", status: "" } as const;
 
   it("keeps everyone when the search is empty or blank", () => {
-    expect(filterRoster(roster, { q: "  ", ...noDates })).toHaveLength(3);
+    expect(filterRoster(roster, { q: "  ", ...noFilters })).toHaveLength(3);
   });
 
   it("matches the name, ignoring case", () => {
-    expect(names(filterRoster(roster, { q: "LOVE", ...noDates }))).toEqual([
+    expect(names(filterRoster(roster, { q: "LOVE", ...noFilters }))).toEqual([
       "Ada Lovelace",
     ]);
   });
 
   it("matches the email", () => {
-    expect(names(filterRoster(roster, { q: "bletchley", ...noDates }))).toEqual(
-      ["Alan Turing"]
-    );
+    expect(
+      names(filterRoster(roster, { q: "bletchley", ...noFilters }))
+    ).toEqual(["Alan Turing"]);
   });
 
   it("finds no one for a search nobody matches", () => {
-    expect(filterRoster(roster, { q: "zzz", ...noDates })).toEqual([]);
+    expect(filterRoster(roster, { q: "zzz", ...noFilters })).toEqual([]);
+  });
+
+  describe("by status", () => {
+    const mixed = [
+      student("Fresh", { status: RosterStatus.NotStarted }),
+      student("Busy", { status: RosterStatus.InProgress }),
+      student("Done", { status: RosterStatus.Completed }),
+    ];
+
+    it("keeps only Students with that status", () => {
+      expect(
+        names(
+          filterRoster(mixed, {
+            ...noFilters,
+            q: "",
+            status: RosterStatus.InProgress,
+          })
+        )
+      ).toEqual(["Busy"]);
+    });
+
+    it("applies the status and the search together", () => {
+      expect(
+        filterRoster(mixed, {
+          ...noFilters,
+          q: "fresh",
+          status: RosterStatus.Completed,
+        })
+      ).toEqual([]);
+    });
   });
 
   describe("by enrolled date", () => {
@@ -118,13 +150,13 @@ describe("filterRoster", () => {
 
     it("keeps Students enrolled on or after `from`", () => {
       expect(
-        names(filterRoster(dated, { q: "", from: "2026-02-10", to: "" }))
+        names(filterRoster(dated, { ...noFilters, q: "", from: "2026-02-10" }))
       ).toEqual(["February", "March"]);
     });
 
     it("keeps Students enrolled on or before `to`", () => {
       expect(
-        names(filterRoster(dated, { q: "", from: "", to: "2026-02-10" }))
+        names(filterRoster(dated, { ...noFilters, q: "", to: "2026-02-10" }))
       ).toEqual(["January", "February"]);
     });
 
@@ -135,12 +167,17 @@ describe("filterRoster", () => {
       ];
 
       expect(
-        names(filterRoster(early, { q: "", from: "2026-01-10", to: "" }))
+        names(filterRoster(early, { ...noFilters, q: "", from: "2026-01-10" }))
       ).toEqual(["Twelfth"]);
     });
 
     it("applies both bounds and the search together", () => {
-      const view = { q: "ma", from: "2026-01-11", to: "2026-03-10" };
+      const view = {
+        ...noFilters,
+        q: "ma",
+        from: "2026-01-11",
+        to: "2026-03-10",
+      };
 
       expect(names(filterRoster(dated, view))).toEqual(["March"]);
     });

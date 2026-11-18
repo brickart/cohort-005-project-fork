@@ -74,7 +74,7 @@ export function useRosterView() {
 
   function clearFilters() {
     setQuery("");
-    update({ q: "", from: "", to: "" });
+    update({ q: "", from: "", to: "", status: "" });
   }
 
   return { view, update: change, sortBy, clearFilters };

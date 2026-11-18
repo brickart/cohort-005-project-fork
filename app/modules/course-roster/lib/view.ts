@@ -18,6 +18,8 @@ export type RosterView = {
   /** Inclusive `YYYY-MM-DD` bounds on the enrolled date, or "" for none. */
   from: string;
   to: string;
+  /** Only Students with this status, or "" for every status. */
+  status: RosterStatus | "";
   sort: RosterSortColumn;
   dir: SortDirection;
 };
@@ -26,6 +28,7 @@ export const DEFAULT_ROSTER_VIEW: RosterView = {
   q: "",
   from: "",
   to: "",
+  status: "",
   sort: "enrolled",
   dir: "desc",
 };
@@ -36,6 +39,9 @@ const viewSchema = z.object({
   q: z.string().catch(DEFAULT_ROSTER_VIEW.q),
   from: isoDay.catch(DEFAULT_ROSTER_VIEW.from),
   to: isoDay.catch(DEFAULT_ROSTER_VIEW.to),
+  status: z
+    .union([z.nativeEnum(RosterStatus), z.literal("")])
+    .catch(DEFAULT_ROSTER_VIEW.status),
   sort: z.enum(ROSTER_SORT_COLUMNS).catch(DEFAULT_ROSTER_VIEW.sort),
   dir: z.enum(["asc", "desc"]).catch(DEFAULT_ROSTER_VIEW.dir),
 });
@@ -46,6 +52,7 @@ export function parseRosterView(params: URLSearchParams): RosterView {
     q: params.get("q") ?? undefined,
     from: params.get("from") ?? undefined,
     to: params.get("to") ?? undefined,
+    status: params.get("status") ?? undefined,
     sort: params.get("sort") ?? undefined,
     dir: params.get("dir") ?? undefined,
   });
@@ -61,10 +68,11 @@ function localDay(timestamp: string): string {
 
 export function filterRoster(
   students: RosterStudent[],
-  { q, from, to }: Pick<RosterView, "q" | "from" | "to">
+  { q, from, to, status }: Pick<RosterView, "q" | "from" | "to" | "status">
 ): RosterStudent[] {
   const needle = q.trim().toLowerCase();
   return students.filter((student) => {
+    if (status && student.status !== status) return false;
     if (
       needle &&
       !student.name.toLowerCase().includes(needle) &&

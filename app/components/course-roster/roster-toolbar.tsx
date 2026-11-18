@@ -1,7 +1,20 @@
 import { Search, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { RosterStatus } from "~/db/schema";
 import type { RosterView } from "~/modules/course-roster";
+import { statusLabel } from "./roster-badges";
+
+// Radix Select cannot hold "", the view's value for every status.
+const ANY_STATUS = "any";
+const STATUSES = Object.values(RosterStatus);
 
 export function RosterToolbar({
   view,
@@ -12,7 +25,8 @@ export function RosterToolbar({
   onChange: (changes: Partial<RosterView>) => void;
   onClear: () => void;
 }) {
-  const filtered = view.q !== "" || view.from !== "" || view.to !== "";
+  const filtered =
+    view.q !== "" || view.from !== "" || view.to !== "" || view.status !== "";
 
   return (
     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -27,6 +41,10 @@ export function RosterToolbar({
           className="pl-9"
         />
       </div>
+      <StatusField
+        value={view.status}
+        onChange={(status) => onChange({ status })}
+      />
       <DateField
         label="Enrolled from"
         value={view.from}
@@ -45,6 +63,38 @@ export function RosterToolbar({
           Clear
         </Button>
       )}
+    </div>
+  );
+}
+
+function StatusField({
+  value,
+  onChange,
+}: {
+  value: RosterView["status"];
+  onChange: (value: RosterView["status"]) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+      <span aria-hidden="true">Status</span>
+      <Select
+        value={value || ANY_STATUS}
+        onValueChange={(next) =>
+          onChange(STATUSES.find((status) => status === next) ?? "")
+        }
+      >
+        <SelectTrigger aria-label="Filter by status" className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY_STATUS}>Any status</SelectItem>
+          {STATUSES.map((status) => (
+            <SelectItem key={status} value={status}>
+              {statusLabel(status)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
