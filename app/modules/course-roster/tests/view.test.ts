@@ -171,6 +171,19 @@ describe("filterRoster", () => {
       ).toEqual(["Twelfth"]);
     });
 
+    it("leaves out a Student with no enrolled date once either bound is set", () => {
+      const undated = [...dated, student("Undated", { enrolledAt: "" })];
+
+      expect(
+        names(
+          filterRoster(undated, { ...noFilters, q: "", from: "2026-03-01" })
+        )
+      ).toEqual(["March"]);
+      expect(
+        names(filterRoster(undated, { ...noFilters, q: "", to: "2026-01-31" }))
+      ).toEqual(["January"]);
+    });
+
     it("applies both bounds and the search together", () => {
       const view = {
         ...noFilters,

@@ -81,6 +81,8 @@ export function filterRoster(
       return false;
     }
     if (!from && !to) return true;
+    // A Lapsed Student with no purchase has no date to match a bound.
+    if (!student.enrolledAt) return false;
     const day = localDay(student.enrolledAt);
     return (!from || day >= from) && (!to || day <= to);
   });
