@@ -41,4 +41,10 @@ describe("searchOnlyNavigation", () => {
       searchOnlyNavigation(args("/instructor/1?q=ada", "/instructor/1?q=ada"))
     ).toBe(true);
   });
+
+  it("revalidates on a move to another page that also changes the query", () => {
+    expect(
+      searchOnlyNavigation(args("/instructor/1?q=ada", "/instructor/2"))
+    ).toBe(true);
+  });
 });

@@ -27,4 +27,12 @@ describe("withSearchParams", () => {
 
     expect(current.toString()).toBe("q=ada");
   });
+
+  it("ignores a change left undefined", () => {
+    const current = new URLSearchParams("q=ada");
+
+    expect(
+      withSearchParams(current, { q: undefined }, defaults).toString()
+    ).toBe("q=ada");
+  });
 });
