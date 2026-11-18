@@ -50,10 +50,25 @@ function useUrlRosterView() {
 export function useRosterView() {
   const { urlView, update } = useUrlRosterView();
   const [query, setQuery] = useState(urlView.q);
+  // The last `q` this hook wrote. A URL `q` that differs came from somewhere
+  // else (Back, a link) and replaces the box's text; the hook's own write can
+  // land after more typing, and must not.
+  const [writtenQuery, setWrittenQuery] = useState(urlView.q);
+  const [seenUrlQuery, setSeenUrlQuery] = useState(urlView.q);
+  if (urlView.q !== seenUrlQuery) {
+    setSeenUrlQuery(urlView.q);
+    if (urlView.q !== writtenQuery) {
+      setWrittenQuery(urlView.q);
+      setQuery(urlView.q);
+    }
+  }
 
   useEffect(() => {
     if (query === urlView.q) return;
-    const timer = setTimeout(() => update({ q: query }), SEARCH_URL_DELAY_MS);
+    const timer = setTimeout(() => {
+      setWrittenQuery(query);
+      update({ q: query });
+    }, SEARCH_URL_DELAY_MS);
     return () => clearTimeout(timer);
   }, [query, urlView.q, update]);
 
@@ -74,8 +89,9 @@ export function useRosterView() {
 
   function clearFilters() {
     setQuery("");
+    setWrittenQuery("");
     update({ q: "", from: "", to: "", status: "" });
   }
 
-  return { view, update: change, sortBy, clearFilters };
+  return { view, change, sortBy, clearFilters };
 }

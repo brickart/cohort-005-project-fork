@@ -13,7 +13,7 @@ export function RosterPanel({
   students: RosterStudent[];
   quizCount: number;
 }) {
-  const { view, update, sortBy, clearFilters } = useRosterView();
+  const { view, change, sortBy, clearFilters } = useRosterView();
   const shown = applyRosterView(students, view);
 
   return (
@@ -37,7 +37,7 @@ export function RosterPanel({
         <EmptyCard message="No students enrolled in this course yet." />
       ) : (
         <>
-          <RosterToolbar view={view} onChange={update} onClear={clearFilters} />
+          <RosterToolbar view={view} onChange={change} onClear={clearFilters} />
           {shown.length === 0 ? (
             <EmptyCard message="No students match these filters." />
           ) : (
